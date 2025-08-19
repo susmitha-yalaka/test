@@ -2,7 +2,7 @@ import logging
 from typing import Any, Dict, Optional, Tuple
 
 import httpx
-from core import config
+from app.core import config
 
 log = logging.getLogger("services.wa")
 
