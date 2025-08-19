@@ -1,9 +1,9 @@
 import httpx
 from typing import List, Dict, Any, Optional
-from app.core.config import settings
+from app.core import config
 from app.schema.testSchema import AddToCartRequest
 
-BASE_URL = settings.RESTAURANT_BASE_URL
+BASE_URL = config.RESTAURANT_BASE_URL
 DEFAULT_TIMEOUT = 10.0
 
 
