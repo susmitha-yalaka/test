@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException, Query, Request, Response
 
 from app.core import config
 from ..services.wa import send_document, send_text
-from ..utils.security import verify_signature
+# from ..utils.security import verify_signature
 
 router = APIRouter(prefix="", tags=["webhook"])
 log = logging.getLogger("routers.webhook")
@@ -24,7 +24,7 @@ async def verify_webhook(
 
 @router.post("/webhook")
 async def receive_webhook(request: Request):
-    await verify_signature(request)  # no-op if APP_SECRET not set
+    # await verify_signature(request)  # no-op if APP_SECRET not set
     body: Dict[str, Any] = await request.json()
     # log.debug("Incoming webhook: %s", body)
 
