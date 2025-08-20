@@ -25,3 +25,5 @@ CORS_ALLOW_ORIGINS: List[str] = [
 
 # === Base URL (optional, if you want to reference your own service) ===
 BASE_URL: str = os.getenv("BASE_URL", "")
+
+RESTAURANT_BASE_URL: str = os.getenv("RESTAURANT_BASE_URL", "")

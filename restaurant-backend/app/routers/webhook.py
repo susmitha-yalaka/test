@@ -58,3 +58,35 @@ async def receive_webhook(request: Request):
 
     # Always 200 OK so Meta doesn't retry too aggressively
     return {"status": "received"}
+
+# 📝 Static menu to respond with
+STATIC_MENU = """
+🍽️ *Today's Menu*:
+1. Veg Biryani - ₹150
+2. Chicken Curry - ₹200
+3. Paneer Butter Masala - ₹180
+4. Tandoori Roti - ₹20
+"""
+
+
+@router.post("/menu")
+async def whatsapp_webhook(req: Request):
+    payload = await req.json()
+
+    try:
+        # Extract message text
+        message_body = payload["entry"][0]["changes"][0]["value"]["messages"][0]["text"]["body"].strip().lower()
+        sender_number = payload["entry"][0]["changes"][0]["value"]["messages"][0]["from"]
+
+        log.info(f"Received message from {sender_number}: {message_body}")
+
+        if message_body == "hi":
+            await send_text(sender_number, STATIC_MENU)
+        else:
+            await send_text(sender_number, "❓ Please send 'hi' to get the menu.")
+
+        return {"status": "message processed"}
+
+    except Exception as e:
+        log.exception("Error processing webhook")
+        return {"status": "error", "detail": str(e)}
