@@ -3,7 +3,8 @@ import os
 from base64 import b64decode, b64encode
 from typing import Dict, Optional
 
-from cryptography import MGF1, OAEP, hashes
+from cryptography.hazmat.primitives.asymmetric.padding import MGF1, OAEP
+from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.serialization import load_pem_private_key
 from dotenv import load_dotenv
