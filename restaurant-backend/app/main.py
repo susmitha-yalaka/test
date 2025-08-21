@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core import config
 from app.core.db import database
 from app.routers import webhook, admin, testRouter
-
+from app.flowsOperations.routers import testFlow
 
 logging.basicConfig(
     level=logging.INFO,
@@ -34,3 +34,4 @@ async def shutdown():
 app.include_router(webhook.router)
 app.include_router(admin.router)
 app.include_router(testRouter.router)
+app.include_router(testFlow.router)

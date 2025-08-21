@@ -115,7 +115,7 @@ async def processingDecryptedData_restaurant(decryptedData: DecryptedRequestData
     return {"version": "3.0", "screen": screen, "data": {}}
 
 
-@router.post("/restaurant-flow")
+@router.post("/restaurantFlow")
 async def restaurant_flow_handler(request):
     try:
         decryptedDataDict, aes_key, iv = decryptRequest(
