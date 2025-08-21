@@ -119,6 +119,7 @@ async def processingDecryptedData_restaurant(decryptedData: DecryptedRequestData
 
 @router.post("/restaurantFlow")
 async def restaurant_flow_handler(request):
+    print(f"request{request}")
     try:
         decryptedDataDict, aes_key, iv = decryptRequest(
             request.encrypted_flow_data,
@@ -129,6 +130,7 @@ async def restaurant_flow_handler(request):
         decrypted_data = DecryptedRequestData(**decryptedDataDict)
 
         response_data = await processingDecryptedData_restaurant(decrypted_data)
+        print(f"response_data{response_data}")
 
         encrypted_response = encryptResponse(response_data, aes_key, iv)
 
