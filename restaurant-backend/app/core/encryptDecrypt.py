@@ -1,4 +1,3 @@
-import base64
 import json
 import os
 from base64 import b64decode, b64encode
@@ -36,16 +35,8 @@ class ResponseData(BaseModel):
 load_dotenv()
 
 # Load the private key string from an environment variable
+PRIVATE_KEY = os.environ.get("PRIVATE_KEY")
 KEY_PASS = os.environ.get("KEY_PASS")
-
-
-PRIVATE_KEY_B64 = os.environ.get("PRIVATE_KEY")
-
-# Decode from base64
-private_key_data = base64.b64decode(PRIVATE_KEY_B64)
-
-# Load private key from decoded data
-PRIVATE_KEY = load_pem_private_key(private_key_data, password=KEY_PASS.encode("utf-8"))
 
 
 def decryptRequest(encrypted_flow_data_b64, encrypted_aes_key_b64, initial_vector_b64):
