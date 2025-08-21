@@ -1,7 +1,8 @@
 import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.core.config import CORS_ALLOW_ORIGINS
+from app.core import config
+from app.core.db import database
 from app.routers import webhook, admin, testRouter
 
 
@@ -13,11 +14,21 @@ logging.basicConfig(
 app = FastAPI(title="WhatsApp Automation (FastAPI - stateless)", version="1.0.0")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=CORS_ALLOW_ORIGINS,
+    allow_origins=config.CORS_ALLOW_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.on_event("startup")
+async def startup():
+    await database.connect()
+
+
+@app.on_event("shutdown")
+async def shutdown():
+    await database.disconnect()
 
 # mount routers
 app.include_router(webhook.router)

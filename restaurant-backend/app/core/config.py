@@ -27,3 +27,4 @@ CORS_ALLOW_ORIGINS: List[str] = [
 BASE_URL: str = os.getenv("BASE_URL", "")
 
 RESTAURANT_BASE_URL: str = os.getenv("RESTAURANT_BASE_URL", "")
+DATABASE_URL = os.getenv("DATABASE_URL")

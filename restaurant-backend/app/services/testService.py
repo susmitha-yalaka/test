@@ -1,40 +1,113 @@
-import httpx
+# app/services/testService.py
+
 from typing import List, Dict, Any, Optional
-from app.core import config
+from app.db import database
 from app.schema.testSchema import AddToCartRequest
+from app.models import models  # Assumes you have all tables defined in models.py
+from sqlalchemy import select, and_, insert, delete
+from datetime import datetime
 
-BASE_URL = config.RESTAURANT_BASE_URL
-DEFAULT_TIMEOUT = 10.0
 
-
+# ✅ Fetch all or filtered menu items
 async def fetch_menu(search: Optional[str] = None) -> List[Dict[str, Any]]:
-    params = {"search": search} if search else {}
-    async with httpx.AsyncClient() as client:
-        resp = await client.get(f"{BASE_URL}/menu", params=params, timeout=DEFAULT_TIMEOUT)
-        resp.raise_for_status()
-        return resp.json()
+    query = models.menu_items.select()
+    if search:
+        query = query.where(models.menu_items.c.title.ilike(f"%{search}%"))
+    return await database.fetch_all(query)
 
 
-async def fetch_cart(table_id: str) -> Dict[str, Any]:
-    async with httpx.AsyncClient() as client:
-        resp = await client.get(f"{BASE_URL}/cart/{table_id}", timeout=DEFAULT_TIMEOUT)
-        resp.raise_for_status()
-        return resp.json()
+# ✅ Fetch current cart for a given table
+async def fetch_cart(table_name: str) -> Dict[str, Any]:
+    # Get the table id from name
+    table_row = await database.fetch_one(
+        select(models.tables.c.id).where(models.tables.c.table_name == table_name)
+    )
+    if not table_row:
+        return {"cart": []}
 
-
-async def add_item_to_cart(table_id: str, payload: AddToCartRequest) -> Dict[str, Any]:
-    async with httpx.AsyncClient() as client:
-        resp = await client.post(
-            f"{BASE_URL}/cart/{table_id}/add",
-            json=payload.dict(),
-            timeout=DEFAULT_TIMEOUT
+    query = (
+        select(
+            models.cart_items.c.id,
+            models.menu_items.c.title,
+            models.menu_items.c.price,
+            models.cart_items.c.quantity,
         )
-        resp.raise_for_status()
-        return resp.json()
+        .select_from(models.cart_items.join(models.menu_items))
+        .where(models.cart_items.c.table_id == table_row.id)
+    )
+    cart_items = await database.fetch_all(query)
+    return {"cart": [dict(item) for item in cart_items]}
 
 
-async def confirm_order(table_id: str) -> Dict[str, Any]:
-    async with httpx.AsyncClient() as client:
-        resp = await client.post(f"{BASE_URL}/order/{table_id}/confirm", timeout=DEFAULT_TIMEOUT)
-        resp.raise_for_status()
-        return resp.json()
+# ✅ Add item to cart
+async def add_item_to_cart(table_name: str, payload: AddToCartRequest) -> Dict[str, Any]:
+    # Get table ID
+    table_row = await database.fetch_one(
+        select(models.tables.c.id).where(models.tables.c.table_name == table_name)
+    )
+    if not table_row:
+        return {"error": "Invalid table"}
+
+    # Get menu item ID
+    menu_row = await database.fetch_one(
+        select(models.menu_items.c.id).where(models.menu_items.c.title == payload.selectedItem)
+    )
+    if not menu_row:
+        return {"error": "Menu item not found"}
+
+    # Insert into cart_items
+    query = insert(models.cart_items).values(
+        table_id=table_row.id,
+        menu_item_id=menu_row.id,
+        quantity=payload.quantity,
+    )
+    await database.execute(query)
+    return {"message": "Item added to cart"}
+
+
+# ✅ Confirm order
+async def confirm_order(table_name: str) -> Dict[str, Any]:
+    # Get table ID
+    table_row = await database.fetch_one(
+        select(models.tables.c.id).where(models.tables.c.table_name == table_name)
+    )
+    if not table_row:
+        return {"error": "Invalid table"}
+
+    table_id = table_row.id
+
+    # Get all cart items
+    cart_query = (
+        select(models.cart_items.c.menu_item_id, models.cart_items.c.quantity, models.menu_items.c.price)
+        .select_from(models.cart_items.join(models.menu_items))
+        .where(models.cart_items.c.table_id == table_id)
+    )
+    cart_items = await database.fetch_all(cart_query)
+
+    if not cart_items:
+        return {"error": "Cart is empty"}
+
+    # Create order
+    order_query = insert(models.orders).values(
+        table_id=table_id,
+        ordered_at=datetime.utcnow(),
+        status="confirmed"
+    )
+    order_id = await database.execute(order_query)
+
+    # Add items to order_items
+    for item in cart_items:
+        await database.execute(
+            insert(models.order_items).values(
+                order_id=order_id,
+                menu_item_id=item.menu_item_id,
+                quantity=item.quantity,
+                price_at_order_time=item.price
+            )
+        )
+
+    # Clear cart
+    delete_query = delete(models.cart_items).where(models.cart_items.c.table_id == table_id)
+    await database.execute(delete_query)
+
+    return {"confirmation_message": "Your order has been placed successfully!"}
