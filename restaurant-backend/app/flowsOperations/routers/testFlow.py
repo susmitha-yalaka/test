@@ -1,8 +1,17 @@
-# testFlow.py
+# app/routers/testFlow.py
+
 from typing import Dict, Any, List
-from app.core.encryptDecrypt import DecryptedRequestData
+from fastapi import APIRouter, HTTPException, Response
+from app.core.encryptDecrypt import (
+    DecryptedRequestData,
+    decryptRequest,      # function to decrypt incoming data (returns decryptedData, aes_key, iv)
+    encryptResponse      # function to encrypt outgoing response
+)
 from app.services import testService
 from app.schema.testSchema import AddToCartRequest
+
+
+router = APIRouter()
 
 
 def build_cart_review_text(cart: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -104,3 +113,24 @@ async def processingDecryptedData_restaurant(decryptedData: DecryptedRequestData
             return {"version": "3.0", "screen": "ORDER_CONFIRMED", "data": {"confirmation_message": confirmation_message}}
 
     return {"version": "3.0", "screen": screen, "data": {}}
+
+
+@router.post("/restaurant-flow")
+async def restaurant_flow_handler(request):
+    try:
+        decryptedDataDict, aes_key, iv = decryptRequest(
+            request.encrypted_flow_data,
+            request.encrypted_aes_key,
+            request.initial_vector,
+        )
+
+        decrypted_data = DecryptedRequestData(**decryptedDataDict)
+
+        response_data = await processingDecryptedData_restaurant(decrypted_data)
+
+        encrypted_response = encryptResponse(response_data, aes_key, iv)
+
+        return Response(content=encrypted_response, media_type="application/octet-stream")
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
