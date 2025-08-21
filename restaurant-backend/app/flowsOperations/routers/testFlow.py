@@ -1,5 +1,6 @@
 # app/routers/testFlow.py
 
+import logging
 from typing import Dict, Any, List
 from fastapi import APIRouter, HTTPException, Response
 from app.core.encryptDecrypt import (
@@ -12,6 +13,7 @@ from app.schema.testSchema import AddToCartRequest
 
 
 router = APIRouter()
+log = logging.getLogger("flow.routers")
 
 
 def build_cart_review_text(cart: List[Dict[str, Any]]) -> Dict[str, Any]:
