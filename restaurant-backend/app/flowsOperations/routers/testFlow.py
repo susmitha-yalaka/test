@@ -5,6 +5,7 @@ from typing import Dict, Any, List
 from fastapi import APIRouter, HTTPException, Response
 from app.core.encryptDecrypt import (
     DecryptedRequestData,
+    RequestData,
     decryptRequest,      # function to decrypt incoming data (returns decryptedData, aes_key, iv)
     encryptResponse      # function to encrypt outgoing response
 )
@@ -30,6 +31,7 @@ def build_cart_review_text(cart: List[Dict[str, Any]]) -> Dict[str, Any]:
 
 async def processingDecryptedData_restaurant(decryptedData: DecryptedRequestData):
     if decryptedData.action == "ping":
+        print(f"decryptedData{decryptedData}")
         return {"version": "3.0", "data": {"status": "active"}}
 
     screen = decryptedData.screen
@@ -118,7 +120,7 @@ async def processingDecryptedData_restaurant(decryptedData: DecryptedRequestData
 
 
 @router.post("/restaurantFlow")
-async def restaurant_flow_handler(request):
+async def restaurant_flow_handler(request: RequestData):
     print(f"request{request}")
     try:
         decryptedDataDict, aes_key, iv = decryptRequest(
