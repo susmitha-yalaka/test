@@ -1,10 +1,10 @@
 # app/services/testService.py
 
 from typing import List, Dict, Any, Optional
-from app.db import database
+from app.core.db import database
 from app.schema.testSchema import AddToCartRequest
 from app.models import models  # Assumes you have all tables defined in models.py
-from sqlalchemy import select, and_, insert, delete
+from sqlalchemy import select, insert, delete
 from datetime import datetime
 
 
