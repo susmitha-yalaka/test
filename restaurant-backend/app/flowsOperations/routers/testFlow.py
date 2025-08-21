@@ -42,6 +42,7 @@ async def processingDecryptedData_restaurant(decryptedData: DecryptedRequestData
     if screen == "ADD_ITEMS":
         if not trigger:
             menu = await testService.fetch_menu()
+            print(f"menu{menu}")
             cart_obj = await testService.fetch_cart(selected_table)
             built = build_cart_review_text(cart_obj.get("cart", []))
             return {

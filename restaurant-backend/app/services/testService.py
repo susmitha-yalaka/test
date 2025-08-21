@@ -13,6 +13,7 @@ async def fetch_menu(search: Optional[str] = None) -> List[Dict[str, Any]]:
     query = models.menu_items.select()
     if search:
         query = query.where(models.menu_items.c.title.ilike(f"%{search}%"))
+        print(f"query{query}")
     return await database.fetch_all(query)
 
 
