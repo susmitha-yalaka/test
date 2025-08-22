@@ -30,3 +30,13 @@ RESTAURANT_BASE_URL: str = os.getenv("RESTAURANT_BASE_URL", "")
 DATABASE_URL = os.getenv("DATABASE_URL")
 FLOW_NAME = os.getenv("FLOW_NAME")
 TARGET_WA_NUMBER = os.getenv("TARGET_WA_NUMBER")
+# Menu generation/cache
+CACHE_DIR = os.getenv("MENU_CACHE_DIR", "cache")
+EXCEL_FILENAME = os.getenv("MENU_EXCEL_FILENAME", "menu.xlsx")
+PDF_FILENAME = os.getenv("MENU_PDF_FILENAME", "menu.pdf")
+LOGO_PATH = os.getenv("MENU_LOGO_PATH", "logo.png")
+CURRENCY_PREFIX = os.getenv("MENU_CURRENCY_PREFIX", "₹")
+
+# Google Drive source (optional; if unset, we’ll use local excel file)
+DRIVE_SA_FILE = os.getenv("DRIVE_SA_FILE", "")          # path to service-account json
+DRIVE_FILE_ID = os.getenv("DRIVE_FILE_ID", "")
