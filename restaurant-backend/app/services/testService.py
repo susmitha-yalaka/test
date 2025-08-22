@@ -6,31 +6,39 @@ from app.core.db import database
 from app.models import models
 
 
+def _to_float(x):
+    return float(x) if isinstance(x, Decimal) else x
+
+
 # Return items for the Dropdown: {id:str, title:str, description:str}
 async def fetch_menu(search: Optional[str] = None) -> List[Dict[str, Any]]:
     query = models.menu_items.select()
     if search:
         query = query.where(models.menu_items.c.title.ilike(f"%{search}%"))
+
     rows = await database.fetch_all(query)
-    items = []
+    items: List[Dict[str, Any]] = []
     for r in rows:
         d = dict(r)
-        price = float(d["price"]) if isinstance(d.get("price"), Decimal) else d.get("price", 0)
+        price = _to_float(d.get("price", 0))
         items.append({
             "id": str(d["id"]),
             "title": d["title"],
+            # description shown to the user; keep it text but computed from float
             "description": f"₹{int(price)}"
         })
     return items
 
 
-# Return cart as list[{id,title,price,quantity}]
+# Return cart as {"cart": list[{id,title,price(float),quantity(int)}]}
 async def fetch_cart(table_name: str) -> Dict[str, Any]:
     table_row = await database.fetch_one(
         select(models.tables.c.id).where(models.tables.c.table_name == table_name)
     )
     if not table_row:
         return {"cart": []}
+
+    table_id = table_row.id if hasattr(table_row, "id") else table_row[0]
 
     query = (
         select(
@@ -40,17 +48,16 @@ async def fetch_cart(table_name: str) -> Dict[str, Any]:
             models.cart_items.c.quantity,
         )
         .select_from(models.cart_items.join(models.menu_items))
-        .where(models.cart_items.c.table_id == table_row.id)
+        .where(models.cart_items.c.table_id == table_id)
     )
     rows = await database.fetch_all(query)
-    cart = []
+    cart: List[Dict[str, Any]] = []
     for r in rows:
         d = dict(r)
-        price = float(d["price"]) if isinstance(d["price"], Decimal) else d["price"]
         cart.append({
             "id": str(d["id"]),
             "title": d["title"],
-            "price": price,
+            "price": _to_float(d["price"]),
             "quantity": int(d["quantity"]),
         })
     return {"cart": cart}
@@ -63,6 +70,8 @@ async def add_item_to_cart(table_name: str, payload) -> Dict[str, Any]:
     if not table_row:
         return {"error": "Invalid table"}
 
+    table_id = table_row.id if hasattr(table_row, "id") else table_row[0]
+
     menu_row = await database.fetch_one(
         select(models.menu_items.c.id).where(models.menu_items.c.id == payload.menu_item_id)
     )
@@ -71,8 +80,8 @@ async def add_item_to_cart(table_name: str, payload) -> Dict[str, Any]:
 
     await database.execute(
         insert(models.cart_items).values(
-            table_id=table_row.id,
-            menu_item_id=menu_row.id,
+            table_id=table_id,
+            menu_item_id=payload.menu_item_id,
             quantity=payload.quantity,
         )
     )
@@ -85,10 +94,14 @@ async def confirm_order(table_name: str) -> Dict[str, Any]:
     )
     if not table_row:
         return {"error": "Invalid table"}
-    table_id = table_row.id
+    table_id = table_row.id if hasattr(table_row, "id") else table_row[0]
 
     cart_query = (
-        select(models.cart_items.c.menu_item_id, models.cart_items.c.quantity, models.menu_items.c.price)
+        select(
+            models.cart_items.c.menu_item_id,
+            models.cart_items.c.quantity,
+            models.menu_items.c.price,
+        )
         .select_from(models.cart_items.join(models.menu_items))
         .where(models.cart_items.c.table_id == table_id)
     )
@@ -97,16 +110,21 @@ async def confirm_order(table_name: str) -> Dict[str, Any]:
         return {"error": "Cart is empty"}
 
     order_id = await database.execute(
-        insert(models.orders).values(table_id=table_id, ordered_at=datetime.utcnow(), status="confirmed")
+        insert(models.orders).values(
+            table_id=table_id,
+            ordered_at=datetime.utcnow(),
+            status="confirmed",
+        )
     )
 
+    # Persist order lines (store price at order time as-is; DB column likely Numeric)
     for item in cart_items:
         await database.execute(
             insert(models.order_items).values(
                 order_id=order_id,
                 menu_item_id=item.menu_item_id,
-                quantity=item.quantity,
-                price_at_order_time=item.price
+                quantity=int(item.quantity),
+                price_at_order_time=item.price,  # DB handles Decimal/Numeric
             )
         )
 
