@@ -64,6 +64,8 @@ async def processingDecryptedData_restaurant(decryptedData: DecryptedRequestData
             cart_obj = await testService.fetch_cart(selected_table)
             built = build_cart_review_text(cart_obj.get("cart", []))
             print(f"cart{cart_obj}, built{built}")
+            print(f"selectedTable, {selected_table},menu_items_filtered: {menu},cart: {cart_obj.get("cart", [])},")
+            print(f"cart_review_text: {built["cart_review_text"]},total: {built["total"]}")
             return {
                 "version": "3.0",
                 "screen": "ADD_ITEMS",
