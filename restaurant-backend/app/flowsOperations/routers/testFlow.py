@@ -60,8 +60,10 @@ async def processingDecryptedData_restaurant(decryptedData: DecryptedRequestData
         if trigger == "filter_menu_items":
             search_q = payload.get("search_query", "")
             menu = await testService.fetch_menu(search_q)
+            print(f"menu{menu}")
             cart_obj = await testService.fetch_cart(selected_table)
             built = build_cart_review_text(cart_obj.get("cart", []))
+            print(f"cart{cart_obj}, built{built}")
             return {
                 "version": "3.0",
                 "screen": "ADD_ITEMS",
