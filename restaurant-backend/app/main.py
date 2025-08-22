@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core import config
 from app.core.db import database
-from app.routers import webhook, admin, testRouter
+from app.routers import webhook, admin, testRouter, menu_router
 from app.flowsOperations.routers import testFlow
 
 logging.basicConfig(
@@ -35,3 +35,4 @@ app.include_router(webhook.router)
 app.include_router(admin.router)
 app.include_router(testRouter.router)
 app.include_router(testFlow.router)
+app.include_router(menu_router.router)
