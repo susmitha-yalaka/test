@@ -3,6 +3,7 @@
 import logging
 from typing import Dict, Any, List
 from fastapi import APIRouter, HTTPException, Response
+from fastapi.encoders import jsonable_encoder
 from app.core.encryptDecrypt import (
     DecryptedRequestData,
     RequestData,
@@ -60,18 +61,19 @@ async def processingDecryptedData_restaurant(decryptedData: DecryptedRequestData
         if trigger == "filter_menu_items":
             search_q = payload.get("search_query", "")
             menu = await testService.fetch_menu(search_q)
-            print(f"menu{menu}")
+            menu_encoded = jsonable_encoder(menu)
+            print(f"menu{menu_encoded}")
             cart_obj = await testService.fetch_cart(selected_table)
             built = build_cart_review_text(cart_obj.get("cart", []))
             print(f"cart{cart_obj}, built{built}")
-            print(f"selectedTable, {selected_table},menu_items_filtered: {menu},cart: {cart_obj.get("cart", [])},")
+            print(f"selectedTable, {selected_table},menu_items_filtered: {menu_encoded},cart: {cart_obj.get("cart", [])},")
             print(f"cart_review_text: {built["cart_review_text"]},total: {built["total"]}")
             return {
                 "version": "3.0",
                 "screen": "ADD_ITEMS",
                 "data": {
                     "selectedTable": selected_table,
-                    "menu_items_filtered": menu,
+                    "menu_items_filtered": menu_encoded,
                     "cart": cart_obj.get("cart", []),
                     "cart_review_text": built["cart_review_text"],
                     "total": built["total"],
