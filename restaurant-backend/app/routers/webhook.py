@@ -21,6 +21,7 @@ async def verify_webhook(
     hub_challenge: Optional[str] = Query(None, alias="hub.challenge"),
 ):
     if hub_mode == "subscribe" and hub_verify_token == config.VERIFY_TOKEN:
+        print(f"hub_mode{hub_mode},hub_verify_token{hub_verify_token} ")
         print("[Webhook] Verification successful")
         return Response(content=hub_challenge or "", media_type="text/plain")
     print("[Webhook] Verification failed")
