@@ -156,6 +156,7 @@ async def restaurant_flow_handler(request: RequestData):
             request.initial_vector,
         )
         decrypted_data = DecryptedRequestData(**decryptedDataDict)
+        print(f"decrypted_data{decrypted_data}")
 
         # Core logic returns a plain dict (already JSON-safe).
         response_dict = await processingDecryptedData_restaurant(decrypted_data)
