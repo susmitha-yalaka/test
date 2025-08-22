@@ -1,9 +1,11 @@
 # app/routers/testFlow.py
 
+from decimal import Decimal
 import logging
 from typing import Dict, Any, List
 from fastapi import APIRouter, HTTPException, Response
 from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
 from app.core.encryptDecrypt import (
     DecryptedRequestData,
     RequestData,
@@ -68,7 +70,7 @@ async def processingDecryptedData_restaurant(decryptedData: DecryptedRequestData
             print(f"cart{cart_obj}, built{built}")
             print(f"selectedTable, {selected_table},menu_items_filtered: {menu_encoded},cart: {cart_obj.get("cart", [])},")
             print(f"cart_review_text: {built["cart_review_text"]},total: {built["total"]}")
-            return {
+            payload = {
                 "version": "3.0",
                 "screen": "ADD_ITEMS",
                 "data": {
@@ -79,6 +81,8 @@ async def processingDecryptedData_restaurant(decryptedData: DecryptedRequestData
                     "total": built["total"],
                 }
             }
+            encoded = jsonable_encoder(payload,  custom_encoder={Decimal: float})
+            return JSONResponse(Content=encoded)
 
         if trigger == "add_item_to_cart":
             selected_item = payload.get("selectedItem")
