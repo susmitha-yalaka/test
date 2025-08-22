@@ -28,3 +28,5 @@ BASE_URL: str = os.getenv("BASE_URL", "")
 
 RESTAURANT_BASE_URL: str = os.getenv("RESTAURANT_BASE_URL", "")
 DATABASE_URL = os.getenv("DATABASE_URL")
+FLOW_NAME = os.getenv("FLOW_NAME")
+TARGET_WA_NUMBER = os.getenv("TARGET_WA_NUMBER")

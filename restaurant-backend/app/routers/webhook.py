@@ -1,7 +1,7 @@
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
-from fastapi import APIRouter, HTTPException, Query, Request, Response
+from fastapi import APIRouter, Request
 
 from app.core import config
 from ..services.wa import send_document, send_text
@@ -11,82 +11,57 @@ router = APIRouter(prefix="", tags=["webhook"])
 log = logging.getLogger("routers.webhook")
 
 
-@router.get("/webhook")
-async def verify_webhook(
-    hub_mode: Optional[str] = Query(None, alias="hub.mode"),
-    hub_verify_token: Optional[str] = Query(None, alias="hub.verify_token"),
-    hub_challenge: Optional[str] = Query(None, alias="hub.challenge"),
-):
-    if hub_mode == "subscribe" and hub_verify_token == config.VERIFY_TOKEN:
-        return Response(content=hub_challenge or "", media_type="text/plain")
-    raise HTTPException(status_code=403, detail="Verification failed")
-
-
 @router.post("/webhook")
 async def receive_webhook(request: Request):
-    # await verify_signature(request)  # no-op if APP_SECRET not set
     body: Dict[str, Any] = await request.json()
-    # log.debug("Incoming webhook: %s", body)
 
     try:
-        # WhatsApp webhook structure: entry[0].changes[0].value.messages[...]
         entries: List[Dict[str, Any]] = body.get("entry", [])
         for entry in entries:
-            changes = entry.get("changes", [])
-            for change in changes:
+            for change in entry.get("changes", []):
                 value = change.get("value", {})
                 messages = value.get("messages", [])
 
                 for msg in messages:
-                    from_number = msg.get("from")  # sender's MSISDN in international format
-                    if not from_number:
+                    from_number_raw = msg.get("from")  # "9198xxxxxxx"
+                    if not from_number_raw:
                         continue
 
-                    # reply with the menu PDF immediately
-                    ok_doc, _ = await send_document(
-                        to_number=from_number,
-                        link=config.MENU_PDF_URL,
-                        filename="Restaurant_Menu.pdf",
+                    # normalize to +E.164 for compare
+                    from_number = (
+                        from_number_raw
+                        if from_number_raw.startswith("+")
+                        else f"+{from_number_raw}"
                     )
 
-                    # optional follow-up
-                    if ok_doc and config.SEND_FOLLOWUP and config.FOLLOWUP_TEXT:
-                        await send_text(from_number, config.FOLLOWUP_TEXT)
+                    # Only react to your specified number
+                    if from_number != config.TARGET_WA_NUMBER:
+                        continue
+
+                    # message text (text msgs only; ignore buttons, templates, etc.)
+                    text = ((msg.get("text") or {}).get("body") or "").strip().lower()
+
+                    if text == "hi":
+                        # Reply with the flow name
+                        await send_text(from_number, config.FLOW_NAME)
+                        # (Optional) stop further processing for this message
+                        continue
+
+                    # --- keep your existing behavior below if you still want it ---
+                    # e.g., send a PDF menu or a fallback message
+                    if getattr(config, "MENU_PDF_URL", None):
+                        ok_doc, _ = await send_document(
+                            to_number=from_number,
+                            link=config.MENU_PDF_URL,
+                            filename="Restaurant_Menu.pdf",
+                        )
+                        if ok_doc and getattr(config, "SEND_FOLLOWUP", False) and getattr(config, "FOLLOWUP_TEXT", ""):
+                            await send_text(from_number, config.FOLLOWUP_TEXT)
+                    else:
+                        await send_text(from_number, "❓ Send *hi* to get the flow name.")
 
     except Exception as e:
         log.exception("Webhook processing failed: %s", e)
 
-    # Always 200 OK so Meta doesn't retry too aggressively
+    # Always 200 so Meta doesn't retry too aggressively
     return {"status": "received"}
-
-# 📝 Static menu to respond with
-STATIC_MENU = """
-🍽️ *Today's Menu*:
-1. Veg Biryani - ₹150
-2. Chicken Curry - ₹200
-3. Paneer Butter Masala - ₹180
-4. Tandoori Roti - ₹20
-"""
-
-
-@router.post("/menu")
-async def whatsapp_webhook(req: Request):
-    payload = await req.json()
-
-    try:
-        # Extract message text
-        message_body = payload["entry"][0]["changes"][0]["value"]["messages"][0]["text"]["body"].strip().lower()
-        sender_number = payload["entry"][0]["changes"][0]["value"]["messages"][0]["from"]
-
-        log.info(f"Received message from {sender_number}: {message_body}")
-
-        if message_body == "hi":
-            await send_text(sender_number, STATIC_MENU)
-        else:
-            await send_text(sender_number, "❓ Please send 'hi' to get the menu.")
-
-        return {"status": "message processed"}
-
-    except Exception as e:
-        log.exception("Error processing webhook")
-        return {"status": "error", "detail": str(e)}
