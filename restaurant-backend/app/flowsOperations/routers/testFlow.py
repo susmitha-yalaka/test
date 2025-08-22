@@ -54,6 +54,23 @@ async def processingDecryptedData_restaurant(dd: DecryptedRequestData) -> Dict[s
     payload = dd.data or {}
     trigger = payload.get("trigger")
     selected_table = payload.get("selectedTable") or payload.get("table") or "table_1"
+    # --- new: allow SELECT_TABLE to prefetch data for ADD_ITEMS ---
+    if screen == "SELECT_TABLE" and payload.get("trigger") == "init_add_items":
+        selected_table = payload.get("selectedTable") or payload.get("table") or "table_1"
+        menu = await testService.fetch_menu()
+        cart_obj = await testService.fetch_cart(selected_table)
+        built = build_cart_review_text(cart_obj["cart"])
+        return {
+            "version": "3.0",
+            "screen": "ADD_ITEMS",   # <-- important: return the NEXT screen and its data
+            "data": {
+                "selectedTable": selected_table,
+                "menu_items_filtered": menu,
+                "cart": cart_obj["cart"],
+                "cart_review_text": built["cart_review_text"],
+                "total": built["total"],
+            },
+        }
 
     # -------------------- ADD_ITEMS --------------------
     if screen == "ADD_ITEMS":
