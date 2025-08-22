@@ -130,6 +130,20 @@ async def processingDecryptedData_restaurant(dd: DecryptedRequestData) -> Dict[s
             })
             return {"version": "3.0", "screen": "ADD_ITEMS", "data": data}
 
+        if trigger == "init_review_order":
+            selected_table = payload.get("selectedTable") or payload.get("table") or "table_1"
+            cart_obj = await testService.fetch_cart(selected_table)
+            built = build_cart_review_text(cart_obj["cart"])
+            return {
+                "version": "3.0",
+                "screen": "REVIEW_ORDER",   # return the NEXT screen and its data
+                "data": {
+                    "selectedTable": selected_table,
+                    "cart_review_text": built["cart_review_text"],
+                    "total": built["total"]
+                },
+            }
+
     # -------------------- REVIEW_ORDER --------------------
     if screen == "REVIEW_ORDER":
         data = _base_data(selected_table)
