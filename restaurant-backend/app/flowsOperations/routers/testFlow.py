@@ -70,6 +70,7 @@ async def processingDecryptedData_restaurant(dd: DecryptedRequestData) -> Dict[s
                 "cart_review_text": built["cart_review_text"],
                 "total": built["total"],
             })
+            print("data{data}")
             return {"version": "3.0", "screen": "ADD_ITEMS", "data": data}
 
         # Filtering menu items
