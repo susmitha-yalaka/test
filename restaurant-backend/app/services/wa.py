@@ -10,7 +10,7 @@ GRAPH_BASE = f"https://graph.facebook.com/{config.GRAPH_API_VERSION}"
 MSG_URL = f"{GRAPH_BASE}/{config.PHONE_NUMBER_ID}/messages"
 MEDIA_URL = f"{GRAPH_BASE}/{config.PHONE_NUMBER_ID}/media"
 
-HEADERS_AUTH = {"Authorization": f"Bearer {config.VERIFY_TOKEN}"}
+HEADERS_AUTH = {"Authorization": f"Bearer {config.WHATSAPP_TOKEN}"}
 
 
 def normalize(n: str) -> str:
