@@ -24,5 +24,5 @@ class CartResponse(BaseModel):
 
 
 class AddToCartRequest(BaseModel):
-    selectedItem: str
+    menu_item_id: int
     quantity: int

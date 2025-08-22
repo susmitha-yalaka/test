@@ -1,141 +1,154 @@
-from decimal import Decimal
-import logging
 from typing import Dict, Any, List
 from fastapi import APIRouter, HTTPException, Response
-from fastapi.encoders import jsonable_encoder
-
+from app.utils.serialization import encode_payload
+from app.services import testService
+from app.schema.testSchema import AddToCartRequest
 from app.core.encryptDecrypt import (
     DecryptedRequestData,
     RequestData,
     decryptRequest,
-    encryptResponse
+    encryptResponse,
 )
-from app.services import testService
-from app.schema.testSchema import AddToCartRequest
 
 router = APIRouter()
-log = logging.getLogger("flow.routers")
 
 
 def build_cart_review_text(cart: List[Dict[str, Any]]) -> Dict[str, Any]:
-    lines = []
-    total_val = 0
+    """Builds a readable cart summary text and computes total."""
+    lines, total = [], 0
     for item in cart:
         price = float(item.get("price", 0))
         qty = int(item.get("quantity", 0))
         line_total = int(price * qty)
         lines.append(f"{item.get('title')} x {qty} – ₹{line_total}")
-        total_val += line_total
-    return {"cart_review_text": "\n".join(lines), "total": str(total_val)}
+        total += line_total
+    return {"cart_review_text": "\n".join(lines), "total": str(total)}
 
 
-def encode_payload(payload: dict) -> dict:
-    return jsonable_encoder(payload, custom_encoder={Decimal: float})
+async def processingDecryptedData_restaurant(dd: DecryptedRequestData):
+    """Core business logic for handling decrypted restaurant flow requests."""
 
-
-async def processingDecryptedData_restaurant(decryptedData: DecryptedRequestData):
-    if decryptedData.action == "ping":
+    if dd.action == "ping":
         return encode_payload({"version": "3.0", "data": {"status": "active"}})
 
-    screen = decryptedData.screen
-    payload = decryptedData.data or {}
+    screen = dd.screen
+    payload = dd.data or {}
     trigger = payload.get("trigger")
-    selected_table = payload.get("selectedTable") or payload.get("table") or "table_1"
+    selected_table = (
+        payload.get("selectedTable") or payload.get("table") or "table_1"
+    )
 
+    # -------------------- ADD_ITEMS --------------------
     if screen == "ADD_ITEMS":
         if not trigger:
             menu = await testService.fetch_menu()
             cart_obj = await testService.fetch_cart(selected_table)
-            built = build_cart_review_text(cart_obj.get("cart", []))
-            return encode_payload({
-                "version": "3.0",
-                "screen": "ADD_ITEMS",
-                "data": {
-                    "selectedTable": selected_table,
-                    "menu_items_filtered": menu,
-                    "cart": cart_obj.get("cart", []),
-                    "cart_review_text": built["cart_review_text"],
-                    "total": built["total"],
-                }
-            })
-
-        if trigger == "filter_menu_items":
-            search_q = payload.get("search_query", "")
-            menu = await testService.fetch_menu(search_q)
-            cart_obj = await testService.fetch_cart(selected_table)
-            built = build_cart_review_text(cart_obj.get("cart", []))
-            return encode_payload({
-                "version": "3.0",
-                "screen": "ADD_ITEMS",
-                "data": {
-                    "selectedTable": selected_table,
-                    "menu_items_filtered": menu,
-                    "cart": cart_obj.get("cart", []),
-                    "cart_review_text": built["cart_review_text"],
-                    "total": built["total"],
-                }
-            })
-
-        if trigger == "add_item_to_cart":
-            selected_item = payload.get("selectedItem")
-            qty = int(payload.get("quantity", 1))
-            if not selected_item:
-                return encode_payload({
+            built = build_cart_review_text(cart_obj["cart"])
+            return encode_payload(
+                {
                     "version": "3.0",
                     "screen": "ADD_ITEMS",
-                    "data": {"error": "No item selected"}
-                })
-            add_payload = AddToCartRequest(selectedItem=selected_item, quantity=qty)
-            await testService.add_item_to_cart(selected_table, add_payload)
+                    "data": {
+                        "selectedTable": selected_table,
+                        "menu_items_filtered": menu,
+                        "cart": cart_obj["cart"],
+                        "cart_review_text": built["cart_review_text"],
+                        "total": built["total"],
+                    },
+                }
+            )
+
+        if trigger == "filter_menu_items":
+            search_q = payload.get("search_query", "") or ""
+            menu = await testService.fetch_menu(search_q)
+            cart_obj = await testService.fetch_cart(selected_table)
+            built = build_cart_review_text(cart_obj["cart"])
+            return encode_payload(
+                {
+                    "version": "3.0",
+                    "screen": "ADD_ITEMS",
+                    "data": {
+                        "selectedTable": selected_table,
+                        "menu_items_filtered": menu,
+                        "cart": cart_obj["cart"],
+                        "cart_review_text": built["cart_review_text"],
+                        "total": built["total"],
+                    },
+                }
+            )
+
+        if trigger == "add_item_to_cart":
+            menu_item_id = payload.get("menu_item_id")
+            qty = int(payload.get("quantity", 1))
+            if not menu_item_id:
+                return encode_payload(
+                    {
+                        "version": "3.0",
+                        "screen": "ADD_ITEMS",
+                        "data": {"error": "No item selected"},
+                    }
+                )
+            await testService.add_item_to_cart(
+                selected_table,
+                AddToCartRequest(menu_item_id=int(menu_item_id), quantity=qty),
+            )
+            # refresh cart after adding
             menu = await testService.fetch_menu()
             cart_obj = await testService.fetch_cart(selected_table)
-            built = build_cart_review_text(cart_obj.get("cart", []))
-            return encode_payload({
-                "version": "3.0",
-                "screen": "ADD_ITEMS",
-                "data": {
-                    "selectedTable": selected_table,
-                    "menu_items_filtered": menu,
-                    "cart": cart_obj.get("cart", []),
-                    "cart_review_text": built["cart_review_text"],
-                    "total": built["total"],
-                    "message": "Item added to cart",
+            built = build_cart_review_text(cart_obj["cart"])
+            return encode_payload(
+                {
+                    "version": "3.0",
+                    "screen": "ADD_ITEMS",
+                    "data": {
+                        "selectedTable": selected_table,
+                        "menu_items_filtered": menu,
+                        "cart": cart_obj["cart"],
+                        "cart_review_text": built["cart_review_text"],
+                        "total": built["total"],
+                        "message": "Item added to cart",
+                    },
                 }
-            })
+            )
 
+    # -------------------- REVIEW_ORDER --------------------
     if screen == "REVIEW_ORDER":
         if not trigger:
             cart_obj = await testService.fetch_cart(selected_table)
-            built = build_cart_review_text(cart_obj.get("cart", []))
-            return encode_payload({
-                "version": "3.0",
-                "screen": "REVIEW_ORDER",
-                "data": {
-                    "selectedTable": selected_table,
-                    "cart": cart_obj.get("cart", []),
-                    "cart_review_text": built["cart_review_text"],
-                    "total": built["total"],
+            built = build_cart_review_text(cart_obj["cart"])
+            return encode_payload(
+                {
+                    "version": "3.0",
+                    "screen": "REVIEW_ORDER",
+                    "data": {
+                        "selectedTable": selected_table,
+                        "cart_review_text": built["cart_review_text"],
+                        "total": built["total"],
+                    },
                 }
-            })
+            )
 
         if trigger == "confirm_order":
-            confirmation = await testService.confirm_order(selected_table)
-            confirmation_message = confirmation.get("confirmation_message", "Your order has been placed successfully!")
-            return encode_payload({
-                "version": "3.0",
-                "screen": "ORDER_CONFIRMED",
-                "data": {"confirmation_message": confirmation_message}
-            })
+            conf = await testService.confirm_order(selected_table)
+            msg = conf.get(
+                "confirmation_message",
+                "Your order has been placed successfully!",
+            )
+            return encode_payload(
+                {
+                    "version": "3.0",
+                    "screen": "ORDER_CONFIRMED",
+                    "data": {"confirmation_message": msg},
+                }
+            )
 
-    return encode_payload({
-        "version": "3.0",
-        "screen": screen,
-        "data": {}
-    })
+    # -------------------- fallback --------------------
+    return encode_payload({"version": "3.0", "screen": screen, "data": {}})
 
 
 @router.post("/restaurantFlow")
 async def restaurant_flow_handler(request: RequestData):
+    """API endpoint for handling restaurant flow requests."""
     try:
         decryptedDataDict, aes_key, iv = decryptRequest(
             request.encrypted_flow_data,
@@ -149,7 +162,9 @@ async def restaurant_flow_handler(request: RequestData):
 
         encrypted_response = encryptResponse(response_data, aes_key, iv)
 
-        return Response(content=encrypted_response, media_type="application/octet-stream")
+        return Response(
+            content=encrypted_response, media_type="application/octet-stream"
+        )
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
