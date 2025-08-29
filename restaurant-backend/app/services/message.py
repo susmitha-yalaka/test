@@ -1,7 +1,7 @@
 import logging
 from typing import Dict, Any
-from app.services.wa import send_text, send_document_by_id, upload_media_pdf, generate_pdf_if_needed, get_pdf_path
-
+from app.services.wa import send_text, send_document_by_id, upload_media_pdf
+from app.services.menu_service import generate_pdf_if_needed, get_pdf_path
 log = logging.getLogger("services.message_logic")
 
 _seen_message_ids = set()
