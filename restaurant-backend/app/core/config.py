@@ -41,4 +41,4 @@ CURRENCY_PREFIX = os.getenv("MENU_CURRENCY_PREFIX", "₹")
 # Google Drive source (optional; if unset, we’ll use local excel file)
 DRIVE_SA_FILE = os.getenv("DRIVE_SA_FILE", "")          # path to service-account json
 DRIVE_FILE_ID = os.getenv("DRIVE_FILE_ID", "")
-FLOW_NAME = os.FLOW_NAME
+FLOW_NAME = os.getenv("FLOW_NAME", "")
