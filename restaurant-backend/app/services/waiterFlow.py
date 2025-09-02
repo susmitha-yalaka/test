@@ -6,6 +6,7 @@ from app.schema.flow import (
     InteractiveActionFlowParameters,
     InteractiveActionParametersFlowActionPayload,
 )
+from app.core import config
 
 
 def waiter_flow(to_number: str) -> FlowMessage:
@@ -21,9 +22,8 @@ def waiter_flow(to_number: str) -> FlowMessage:
             action=InteractiveAction(
                 parameters=InteractiveActionFlowParameters(
                     flow_token="biz_eats_start",
-                    flow_id="TEST_FLOW_BIZ_EATS_7.0.1",
                     flow_cta="Start Order",
-                    flow_name="Biz Eats Ordering Flow",
+                    flow_name=config.FLOW_NAME,
                     flow_action_payload=InteractiveActionParametersFlowActionPayload(
                         screen="SELECT_TABLE"
                     ),

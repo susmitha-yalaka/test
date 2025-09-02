@@ -36,7 +36,6 @@ class InteractiveActionParametersFlowActionPayload(BaseModel):
 class InteractiveActionFlowParameters(BaseModel):
     flow_message_version: str = "3.0"
     flow_token: str
-    flow_id: str
     flow_cta: str
     flow_name: Optional[str] = None
     flow_action: FlowAction = FlowAction.NAVIGATE
