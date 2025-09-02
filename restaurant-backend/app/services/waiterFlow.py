@@ -20,7 +20,7 @@ def waiter_flow(to_number: str) -> FlowMessage:
             ),
             action=InteractiveAction(
                 parameters=InteractiveActionFlowParameters(
-                    flow_token="biz_eats_start",     # arbitrary but unique
+                    flow_token="biz_eats_start",
                     flow_id="TEST_FLOW_BIZ_EATS_7.0.1",
                     flow_cta="Start Order",
                     flow_name="Biz Eats Ordering Flow",
