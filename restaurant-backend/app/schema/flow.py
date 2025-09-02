@@ -34,7 +34,7 @@ class InteractiveActionParametersFlowActionPayload(BaseModel):
 
 
 class InteractiveActionFlowParameters(BaseModel):
-    flow_message_version: str = "7.0"
+    flow_message_version: str = "7.1"
     flow_token: str
     flow_id: str
     flow_cta: str
