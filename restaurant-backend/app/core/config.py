@@ -42,3 +42,4 @@ CURRENCY_PREFIX = os.getenv("MENU_CURRENCY_PREFIX", "₹")
 DRIVE_SA_FILE = os.getenv("DRIVE_SA_FILE", "")          # path to service-account json
 DRIVE_FILE_ID = os.getenv("DRIVE_FILE_ID", "")
 FLOW_NAME = os.getenv("FLOW_NAME", "")
+FLOW_ID = os.getenv("FLOW_ID", "")
