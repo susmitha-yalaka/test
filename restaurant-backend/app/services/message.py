@@ -47,8 +47,9 @@ async def handle_webhook_event(body: Dict[str, Any]) -> None:
                     # Build your flow payload via waiter_flow (Pydantic model)
                     try:
                         flow_msg = waiter_flow(from_number)
-                        print(f"flow_msg {flow_msg}")
-                        ok, resp = await send_interactive(flow_msg.dict())
+                        payload = flow_msg.dict(exclude_none=True)
+                        print(f"flow_msg {payload}")
+                        ok, resp = await send_interactive(payload)
                         print(f"[handle_webhook_event] flow send ok={ok} resp={resp}")
                         if not ok:
                             # graceful fallback if flow send fails
