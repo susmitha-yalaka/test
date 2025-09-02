@@ -163,7 +163,7 @@ def build_flow_message(
     # Build the action parameters, relying on the Pydantic validator to enforce
     # payload presence/absence based on the selected action.
     params = InteractiveActionFlowParameters(
-        flow_message_version="3.0",
+        flow_message_version="3",
         flow_token=flow_token,
         flow_id=flow_id,
         flow_cta=flow_cta,

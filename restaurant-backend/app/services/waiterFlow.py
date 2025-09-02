@@ -21,7 +21,7 @@ def waiter_flow(to_number: str) -> FlowMessage:
             ),
             action=InteractiveAction(
                 parameters=InteractiveActionFlowParameters(
-                    flow_message_version="3.0",
+                    flow_message_version="3",
                     flow_token="biz_eats_start",
                     flow_cta="Start Order",
                     # flow_name=config.FLOW_NAME,
