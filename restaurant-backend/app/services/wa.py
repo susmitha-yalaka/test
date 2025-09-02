@@ -123,7 +123,7 @@ async def send_interactive(message: Union[FlowMessage, dict]) -> Tuple[bool, str
     You may pass either a FlowMessage instance or a pre-built dict payload. If a
     FlowMessage instance is provided, it will be serialized to JSON with nulls excluded.
     """
-    print(f"[message]{message}")
+    # print(f"[message]{message}")
     if isinstance(message, FlowMessage):
         # pydantic v1 compatibility
         try:
@@ -133,6 +133,8 @@ async def send_interactive(message: Union[FlowMessage, dict]) -> Tuple[bool, str
             payload = message.model_dump(exclude_none=True)
     else:
         payload = message
+
+    print(f"payload{payload}")
 
     # As a safety net ensure the phone is normalized if present
     to_number = payload.get("to")
