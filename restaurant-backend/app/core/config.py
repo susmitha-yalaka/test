@@ -8,7 +8,7 @@ load_dotenv()
 # === WhatsApp / Meta ===
 VERIFY_TOKEN: str = os.getenv("VERIFY_TOKEN", "")
 WHATSAPP_TOKEN: str = os.getenv("WHATSAPP_TOKEN", "")
-WABA_TOKEN: str = os.getenv("WABA_TOKEN", "")
+WABA_ID: str = os.getenv("WABA_ID", "")
 PHONE_NUMBER_ID: str = os.getenv("PHONE_NUMBER_ID", "")
 APP_SECRET: Optional[str] = os.getenv("APP_SECRET")
 
