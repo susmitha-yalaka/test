@@ -3,7 +3,13 @@ import logging
 from typing import Dict, Any, Set
 
 from app.core import config
-from app.services.wa import send_text, send_document_by_id, upload_media_pdf, send_interactive
+from app.services.wa import (
+    upload_media_pdf,
+    send_text,
+    send_interactive,
+    send_document,
+)
+
 from app.services.menu_service import generate_pdf_if_needed, get_pdf_path
 from app.services.waiterFlow import waiter_flow  # should return a Pydantic model with .dict()
 
@@ -44,23 +50,18 @@ async def handle_webhook_event(body: Dict[str, Any]) -> None:
 
                 if text == "hi":
                     print("inside hi")
-                    # Build your flow payload via waiter_flow (Pydantic model)
                     try:
                         flow_msg = waiter_flow(from_number)
                         payload = flow_msg.dict(exclude_none=True)
                         print(f"flow_msg {payload}")
-                        ok, resp = await send_interactive(payload)
-                        print(f"[handle_webhook_event] flow send ok={ok} resp={resp}")
-                        if not ok:
-                            # graceful fallback if flow send fails
-                            await send_text(from_number, getattr(config, "FLOW_NAME", "Flow"))
+                        await send_interactive(from_number, payload, msg_id)
                     except Exception as e:
                         log.exception("Failed to send interactive flow: %s", e)
-                        await send_text(from_number, getattr(config, "FLOW_NAME", "Flow"))
+                        await send_text(from_number, getattr(config, "FLOW_NAME", "Flow"), msg_id)
                     continue
 
                 if text == "hello":
-                    await send_text(from_number, "hello, how can we help you?")
+                    await send_text(from_number, "hello, how can we help you?", msg_id)
                     continue
 
                 if text == "menu":
@@ -72,20 +73,18 @@ async def handle_webhook_event(body: Dict[str, Any]) -> None:
                         ok_upload, media_id_or_err = await upload_media_pdf(pdf_path)
                         print(f"[handle_webhook_event] upload ok={ok_upload} result={media_id_or_err}")
                         if not ok_upload:
-                            await send_text(from_number, "⚠️ Could not upload the menu right now.")
+                            await send_text(from_number, "⚠️ Could not upload the menu right now.", msg_id)
                             continue
 
-                        ok_send, send_resp = await send_document_by_id(from_number, media_id_or_err, filename="menu.pdf")
-                        print(f"[handle_webhook_event] send ok={ok_send} resp={send_resp}")
-                        if not ok_send:
-                            await send_text(from_number, "⚠️ Upload worked but sending the menu failed.")
+                        await send_document(from_number, media_id_or_err, "menu.pdf", msg_id)
                     except Exception as e:
                         log.exception("PDF generation/send failed: %s", e)
-                        await send_text(from_number, "⚠️ Sorry, the menu is not available right now.")
+                        await send_text(from_number, "⚠️ Sorry, the menu is not available right now.", msg_id)
                     continue
 
                 # default
                 await send_text(
                     from_number,
-                    "Try *hi*, *hello*, or *menu* to explore available options."
+                    "Try *hi*, *hello*, or *menu* to explore available options.",
+                    msg_id
                 )
