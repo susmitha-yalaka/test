@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from app.services import testService
-from app.schema.testSchema import AddToCartRequest
+from app.schema.test_schema import AddToCartRequest
 
 router = APIRouter(prefix="/restaurant", tags=["Restaurant API"])
 

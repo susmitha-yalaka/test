@@ -6,6 +6,7 @@ import httpx
 from app.core import config
 from app.schema.flow import FlowMessage
 
+# WhatsApp Graph API endpoints
 GRAPH_BASE = f"https://graph.facebook.com/{config.GRAPH_API_VERSION}"
 MSG_URL = f"{GRAPH_BASE}/{config.PHONE_NUMBER_ID}/messages"
 MEDIA_URL = f"{GRAPH_BASE}/{config.PHONE_NUMBER_ID}/media"
@@ -14,12 +15,12 @@ HEADERS_AUTH = {"Authorization": f"Bearer {config.WHATSAPP_TOKEN}"}
 
 
 def normalize(n: str) -> str:
-    """Ensure number is +E.164 format for WhatsApp."""
+    """Convert number to E.164 format required by WhatsApp."""
     return n if n.startswith("+") else f"+{n}"
 
 
 async def _post_to_whatsapp(json_payload: dict) -> Tuple[bool, str]:
-    """Internal helper to POST to WhatsApp messages endpoint."""
+    """POST payload to WhatsApp messages endpoint."""
     async with httpx.AsyncClient(timeout=20) as client:
         r = await client.post(
             MSG_URL,
@@ -29,11 +30,10 @@ async def _post_to_whatsapp(json_payload: dict) -> Tuple[bool, str]:
         return r.status_code < 400, r.text
 
 
-# ------------------------
-# Read Receipt + Typing
-# ------------------------
+# ---- Receipts & Indicators ----
 
 def _read_receipt(message_id: str) -> dict:
+    """Payload for read receipt."""
     return {
         "messaging_product": "whatsapp",
         "status": "read",
@@ -42,6 +42,7 @@ def _read_receipt(message_id: str) -> dict:
 
 
 def _typing_indicator(to_number: str, state="on") -> dict:
+    """Payload for typing indicator (state = 'on' or 'off')."""
     return {
         "messaging_product": "whatsapp",
         "to": normalize(to_number),
@@ -50,20 +51,13 @@ def _typing_indicator(to_number: str, state="on") -> dict:
     }
 
 
-# ------------------------
-# Core Wrapper
-# ------------------------
-
 async def send_with_receipts(
     to_number: str,
     message_id: str,
     message_payload: dict
 ):
     """
-    Sends in parallel:
-      1. read receipt
-      2. typing indicator
-      3. actual reply (text/doc/interactive)
+    Send read receipt, typing indicator, and actual message in parallel.
     """
     tasks = [
         _post_to_whatsapp(_read_receipt(message_id)),
@@ -73,15 +67,10 @@ async def send_with_receipts(
     return await asyncio.gather(*tasks)
 
 
-# ------------------------
-# High-level wrappers
-# ------------------------
+# ---- Message Senders ----
 
-async def send_text(
-    to_number: str,
-    body: str,
-    message_id: str
-) -> Tuple[bool, str]:
+async def send_text(to_number: str, body: str, message_id: str) -> Tuple[bool, str]:
+    """Send a text message with receipts."""
     payload = {
         "messaging_product": "whatsapp",
         "to": normalize(to_number),
@@ -97,6 +86,7 @@ async def send_document(
     filename: str,
     message_id: str
 ) -> Tuple[bool, str]:
+    """Send a document (already uploaded to WhatsApp)."""
     payload = {
         "messaging_product": "whatsapp",
         "to": normalize(to_number),
@@ -111,11 +101,12 @@ async def send_interactive(
     message: Union[FlowMessage, dict],
     message_id: str
 ) -> Tuple[bool, str]:
+    """Send an interactive message (list, buttons, flow)."""
     if isinstance(message, FlowMessage):
         try:
-            payload = message.dict(exclude_none=True)  # pydantic v1
+            payload = message.dict(exclude_none=True)  # Pydantic v1
         except Exception:
-            payload = message.model_dump(exclude_none=True)  # pydantic v2
+            payload = message.model_dump(exclude_none=True)  # Pydantic v2
     else:
         payload = message
 
@@ -123,14 +114,10 @@ async def send_interactive(
     return await send_with_receipts(to_number, message_id, payload)
 
 
-# ------------------------
-# Media Upload
-# ------------------------
+# ---- Media Upload ----
 
 async def upload_media_pdf(file_path: str) -> Tuple[bool, str]:
-    """
-    Upload a local PDF to WhatsApp. Returns (ok, media_id_or_error_text).
-    """
+    """Upload a local PDF to WhatsApp and return media_id."""
     if not os.path.exists(file_path):
         return False, f"file_not_found:{file_path}"
     if os.path.getsize(file_path) == 0:
@@ -152,6 +139,5 @@ async def upload_media_pdf(file_path: str) -> Tuple[bool, str]:
             pass
 
     if r.status_code < 400:
-        media_id = r.json().get("id", "")
-        return True, media_id
+        return True, r.json().get("id", "")
     return False, r.text

@@ -9,15 +9,17 @@ from app.services.wa import (
     send_interactive,
     send_document,
 )
-
 from app.services.menu_service import generate_pdf_if_needed, get_pdf_path
-from app.services.waiterFlow import waiter_flow  # should return a Pydantic model with .dict()
+from app.flowsOperations.services import waiter_flow  # returns a Pydantic model with .dict()
 
 log = logging.getLogger("services.message_logic")
+
+# Track processed message IDs to avoid duplicate handling
 _seen_message_ids: Set[str] = set()
 
 
 async def handle_webhook_event(body: Dict[str, Any]) -> None:
+    """Process an incoming WhatsApp webhook payload."""
     print(f"[handle_webhook_event] incoming: {body}")
 
     for entry in body.get("entry", []):
@@ -40,7 +42,7 @@ async def handle_webhook_event(body: Dict[str, Any]) -> None:
                     continue
                 from_number = from_raw if from_raw.startswith("+") else f"+{from_raw}"
 
-                # Optional allow-list
+                # Optional allow-list check
                 if getattr(config, "TARGET_WA_NUMBER", "") and from_number != config.TARGET_WA_NUMBER:
                     print(f"[handle_webhook_event] ignoring {from_number} (not TARGET_WA_NUMBER)")
                     continue
@@ -48,8 +50,8 @@ async def handle_webhook_event(body: Dict[str, Any]) -> None:
                 text = ((msg.get("text") or {}).get("body") or "").strip().lower()
                 print(f"[handle_webhook_event] from={from_number} text='{text}'")
 
+                # --- Command handling ---
                 if text == "hi":
-                    print("inside hi")
                     try:
                         flow_msg = waiter_flow(from_number)
                         payload = flow_msg.dict(exclude_none=True)
@@ -82,7 +84,7 @@ async def handle_webhook_event(body: Dict[str, Any]) -> None:
                         await send_text(from_number, "⚠️ Sorry, the menu is not available right now.", msg_id)
                     continue
 
-                # default
+                # --- Default fallback ---
                 await send_text(
                     from_number,
                     "Try *hi*, *hello*, or *menu* to explore available options.",

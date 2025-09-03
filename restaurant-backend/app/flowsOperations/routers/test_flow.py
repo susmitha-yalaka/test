@@ -2,7 +2,7 @@
 from typing import Dict, Any, List
 from fastapi import APIRouter, HTTPException, Response
 from app.services import testService
-from app.schema.testSchema import AddToCartRequest
+from app.schema.test_schema import AddToCartRequest
 from app.core.encryptDecrypt import (
     DecryptedRequestData,
     RequestData,
