@@ -23,7 +23,7 @@ def normalize(n: str) -> str:
     return n if n.startswith("+") else f"+{n}"
 
 
-async def send_with_receipts(json_payload: dict) -> Tuple[bool, str]:
+async def _post_to_whatsapp(json_payload: dict) -> Tuple[bool, str]:
     """Internal helper to POST to WhatsApp messages endpoint."""
     async with httpx.AsyncClient(timeout=20) as client:
         r = await client.post(
@@ -173,8 +173,8 @@ async def send_with_receipts(
     in parallel
     """
     tasks = [
-        send_with_receipts(_read_receipt(message_id)),
-        send_with_receipts(_typing_indicator(to_number, "on")),
-        send_with_receipts(message_payload),
+        _post_to_whatsapp(_read_receipt(message_id)),
+        _post_to_whatsapp(_typing_indicator(to_number, "on")),
+        _post_to_whatsapp(message_payload),
     ]
     return await asyncio.gather(*tasks)
