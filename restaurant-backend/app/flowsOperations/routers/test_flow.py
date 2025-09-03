@@ -1,7 +1,7 @@
 # app/routers/testFlow.py
 from typing import Dict, Any, List
 from fastapi import APIRouter, HTTPException, Response
-from app.services import test_service
+from app.services import test_flow_service
 from app.schema.test_schema import AddToCartRequest
 from app.core.encryptDecrypt import (
     DecryptedRequestData,
@@ -57,8 +57,8 @@ async def processingDecryptedData_restaurant(dd: DecryptedRequestData) -> Dict[s
     # --- new: allow SELECT_TABLE to prefetch data for ADD_ITEMS ---
     if screen == "SELECT_TABLE" and payload.get("trigger") == "init_add_items":
         selected_table = payload.get("selectedTable") or payload.get("table") or "table_1"
-        menu = await test_service.fetch_menu()
-        cart_obj = await test_service.fetch_cart(selected_table)
+        menu = await test_flow_service.fetch_menu()
+        cart_obj = await test_flow_service.fetch_cart(selected_table)
         built = build_cart_review_text(cart_obj["cart"])
         return {
             "version": "3.0",
@@ -78,8 +78,8 @@ async def processingDecryptedData_restaurant(dd: DecryptedRequestData) -> Dict[s
 
         # First load of ADD_ITEMS
         if not trigger:
-            menu = await test_service.fetch_menu()
-            cart_obj = await test_service.fetch_cart(selected_table)
+            menu = await test_flow_service.fetch_menu()
+            cart_obj = await test_flow_service.fetch_cart(selected_table)
             built = build_cart_review_text(cart_obj["cart"])
             data.update({
                 "menu_items_filtered": menu,
@@ -93,8 +93,8 @@ async def processingDecryptedData_restaurant(dd: DecryptedRequestData) -> Dict[s
         # Filtering menu items
         if trigger == "filter_menu_items":
             search_q = payload.get("search_query", "") or ""
-            menu = await test_service.fetch_menu(search_q)
-            cart_obj = await test_service.fetch_cart(selected_table)
+            menu = await test_flow_service.fetch_menu(search_q)
+            cart_obj = await test_flow_service.fetch_cart(selected_table)
             built = build_cart_review_text(cart_obj["cart"])
             data.update({
                 "menu_items_filtered": menu,
@@ -112,14 +112,14 @@ async def processingDecryptedData_restaurant(dd: DecryptedRequestData) -> Dict[s
                 data.update({"error": "No item selected"})
                 return {"version": "3.0", "screen": "ADD_ITEMS", "data": data}
 
-            await test_service.add_item_to_cart(
+            await test_flow_service.add_item_to_cart(
                 selected_table,
                 AddToCartRequest(menu_item_id=int(menu_item_id), quantity=qty),
             )
 
             # Refresh state after add
-            menu = await test_service.fetch_menu()
-            cart_obj = await test_service.fetch_cart(selected_table)
+            menu = await test_flow_service.fetch_menu()
+            cart_obj = await test_flow_service.fetch_cart(selected_table)
             built = build_cart_review_text(cart_obj["cart"])
             data.update({
                 "menu_items_filtered": menu,
@@ -132,7 +132,7 @@ async def processingDecryptedData_restaurant(dd: DecryptedRequestData) -> Dict[s
 
         if trigger == "init_review_order":
             selected_table = payload.get("selectedTable") or payload.get("table") or "table_1"
-            cart_obj = await test_service.fetch_cart(selected_table)
+            cart_obj = await test_flow_service.fetch_cart(selected_table)
             built = build_cart_review_text(cart_obj["cart"])
             return {
                 "version": "3.0",
@@ -149,7 +149,7 @@ async def processingDecryptedData_restaurant(dd: DecryptedRequestData) -> Dict[s
         data = _base_data(selected_table)
 
         if not trigger:
-            cart_obj = await test_service.fetch_cart(selected_table)
+            cart_obj = await test_flow_service.fetch_cart(selected_table)
             built = build_cart_review_text(cart_obj["cart"])
             data.update({
                 "cart": cart_obj["cart"],
@@ -159,7 +159,7 @@ async def processingDecryptedData_restaurant(dd: DecryptedRequestData) -> Dict[s
             return {"version": "3.0", "screen": "REVIEW_ORDER", "data": data}
 
         if trigger == "confirm_order":
-            conf = await test_service.confirm_order(selected_table)
+            conf = await test_flow_service.confirm_order(selected_table)
             msg = conf.get(
                 "confirmation_message",
                 "Your order has been placed successfully!",
