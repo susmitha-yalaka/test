@@ -23,7 +23,7 @@ def normalize(n: str) -> str:
     return n if n.startswith("+") else f"+{n}"
 
 
-async def _post_to_whatsapp(json_payload: dict) -> Tuple[bool, str]:
+async def send_with_receipts(json_payload: dict) -> Tuple[bool, str]:
     """Internal helper to POST to WhatsApp messages endpoint."""
     async with httpx.AsyncClient(timeout=20) as client:
         r = await client.post(
@@ -42,7 +42,7 @@ async def send_text(to_number: str, body: str) -> Tuple[bool, str]:
         "type": "text",
         "text": {"body": body},
     }
-    return await _post_to_whatsapp(payload)
+    return await send_with_receipts(payload)
 
 
 async def send_document_by_id(
@@ -55,7 +55,7 @@ async def send_document_by_id(
         "type": "document",
         "document": {"id": media_id, "filename": filename},
     }
-    return await _post_to_whatsapp(payload)
+    return await send_with_receipts(payload)
 
 
 async def send_document_link(
@@ -68,7 +68,7 @@ async def send_document_link(
         "type": "document",
         "document": {"link": link, "filename": filename},
     }
-    return await _post_to_whatsapp(payload)
+    return await send_with_receipts(payload)
 
 
 async def upload_media_pdf(file_path: str) -> Tuple[bool, str]:
@@ -132,7 +132,7 @@ async def send_interactive(message: Union[FlowMessage, dict]) -> Tuple[bool, str
     if isinstance(to_number, str):
         payload["to"] = normalize(to_number)
 
-    return await _post_to_whatsapp(payload)
+    return await send_with_receipts(payload)
 
 
 # ------------------------
@@ -173,8 +173,8 @@ async def send_with_receipts(
     in parallel
     """
     tasks = [
-        _post_to_whatsapp(_read_receipt(message_id)),
-        _post_to_whatsapp(_typing_indicator(to_number, "on")),
-        _post_to_whatsapp(message_payload),
+        send_with_receipts(_read_receipt(message_id)),
+        send_with_receipts(_typing_indicator(to_number, "on")),
+        send_with_receipts(message_payload),
     ]
     return await asyncio.gather(*tasks)
