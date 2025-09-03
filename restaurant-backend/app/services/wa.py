@@ -1,3 +1,4 @@
+import asyncio
 import os
 from typing import Tuple, Union
 
@@ -132,3 +133,48 @@ async def send_interactive(message: Union[FlowMessage, dict]) -> Tuple[bool, str
         payload["to"] = normalize(to_number)
 
     return await _post_to_whatsapp(payload)
+
+
+# ------------------------
+# Read Receipt + Typing
+# ------------------------
+
+def _read_receipt(message_id: str) -> dict:
+    return {
+        "messaging_product": "whatsapp",
+        "status": "read",
+        "message_id": message_id,
+    }
+
+
+def _typing_indicator(to_number: str, state="on") -> dict:
+    return {
+        "messaging_product": "whatsapp",
+        "to": normalize(to_number),
+        "type": "typing",
+        "typing": {"state": state},
+    }
+
+
+# ------------------------
+# Wrapper to send ALL in parallel
+# ------------------------
+
+async def send_with_receipts(
+    to_number: str,
+    message_id: str,
+    message_payload: dict
+):
+    """
+    Sends:
+      1. read receipt
+      2. typing indicator
+      3. actual reply (text/doc/interactive)
+    in parallel
+    """
+    tasks = [
+        _post_to_whatsapp(_read_receipt(message_id)),
+        _post_to_whatsapp(_typing_indicator(to_number, "on")),
+        _post_to_whatsapp(message_payload),
+    ]
+    return await asyncio.gather(*tasks)
