@@ -10,7 +10,7 @@ from app.services.wa import (
     send_document,
 )
 from app.services.menu_service import generate_pdf_if_needed, get_pdf_path
-from app.flowsOperations.services import waiter_flow  # returns a Pydantic model with .dict()
+from app.flowsOperations.services.waiter_flow_service import waiter_flow
 
 log = logging.getLogger("services.message_logic")
 
