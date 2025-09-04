@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core import config
 from app.core.db import database
-from app.routers import webhook, admin, test_router, menu_router
+from app.routers import webhook, test_router, menu_router
 from app.flowsOperations.routers import test_flow
 
 logging.basicConfig(
@@ -32,7 +32,6 @@ async def shutdown():
 
 # mount routers
 app.include_router(webhook.router)
-app.include_router(admin.router)
 app.include_router(test_router.router)
 app.include_router(test_flow.router)
 app.include_router(menu_router.router)
