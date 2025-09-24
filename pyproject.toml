@@ -1,0 +1,13 @@
+[tool.black]
+line-length = 160
+target-version = ['py37', 'py38','py312']  # specify Python versions you support
+include = '\.pyi?$'  # regex to include files for formatting
+exclude = '''
+/(
+    \.git
+  | \.venv
+  | build
+  | dist
+  | \venv
+)/
+'''

@@ -1,0 +1,299 @@
+{
+  "version": "7.2",
+  "data_api_version": "3.0",
+  "routing_model": {
+    "CHOOSE_NAV": ["VIEW_ORDER", "NEW_ORDER", "MANAGE_INVENTORY"]
+  },
+  "screens": [
+    {
+      "id": "CHOOSE_NAV",
+      "title": "Boutique Console",
+      "data": {},
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "NavigationList",
+            "name": "Options",
+            "list-items": [
+              {
+                "id": "manageOrder",
+                "main-content": { "title": "Manage Orders", "metadata": "View & update order status" },
+                "on-click-action": {
+                  "name": "navigate",
+                  "next": { "name": "VIEW_ORDER", "type": "screen" },
+                  "payload": {}
+                }
+              },
+              {
+                "id": "addNewOrder",
+                "enabled": true,
+                "main-content": { "title": "Add New Order", "metadata": "Create a new boutique order" },
+                "on-click-action": {
+                  "name": "navigate",
+                  "next": { "name": "NEW_ORDER", "type": "screen" },
+                  "payload": {}
+                }
+              },
+              {
+                "id": "manageInventory",
+                "main-content": { "title": "Manage Inventory", "metadata": "Adjust item stock levels" },
+                "on-click-action": {
+                  "name": "navigate",
+                  "next": { "name": "MANAGE_INVENTORY", "type": "screen" },
+                  "payload": {}
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+
+    {
+      "id": "VIEW_ORDER",
+      "title": "View / Update Boutique Order",
+      "terminal": true,
+      "success": true,
+      "data": {
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          { "type": "TextHeading", "text": "View/Update a boutique order" },
+          {
+            "type": "Form",
+            "name": "view_order_form",
+            "children": [
+              { "type": "Dropdown", "label": "Filter by status", "name": "status_filter", "data-source": [
+                { "id": "ALL", "title": "All" },
+                { "id": "Pending", "title": "Pending" },
+                { "id": "Confirmed", "title": "Confirmed" },
+                { "id": "Preparing", "title": "Preparing" },
+                { "id": "OutForDelivery", "title": "Out for delivery" },
+                { "id": "Delivered", "title": "Delivered" },
+                { "id": "Cancelled", "title": "Cancelled" }
+              ]},
+              { "type": "Dropdown", "label": "Select order", "name": "order_select", "required": true, "data-source": [
+                { "id": "BTQ-1001", "title": "BTQ-1001 — Asha Menon (Preparing)" },
+                { "id": "BTQ-1002", "title": "BTQ-1002 — Rahul Khanna (Out for delivery)" }
+              ]},
+              { "type": "Dropdown", "label": "Update status", "name": "new_status", "data-source": [
+                { "id": "Pending", "title": "Pending" },
+                { "id": "Confirmed", "title": "Confirmed" },
+                { "id": "Preparing", "title": "Preparing" },
+                { "id": "OutForDelivery", "title": "Out for delivery" },
+                { "id": "Delivered", "title": "Delivered" },
+                { "id": "Cancelled", "title": "Cancelled" }
+              ]},
+              { "type": "TextArea", "label": "Internal note", "name": "update_note", "max-length": 250 }
+            ]
+          },
+          {
+            "type": "Footer",
+            "label": "Complete",
+            "on-click-action": {
+              "name": "complete",
+              "payload": {
+                "order": { "id": "${form.order_select}", "new_status": "${form.new_status}", "note": "${form.update_note}" },
+                "status_filter": "${form.status_filter}"
+              }
+            }
+          }
+        ]
+      }
+    },
+
+    {
+      "id": "NEW_ORDER",
+      "title": "Create New Boutique Order",
+      "terminal": true,
+      "data": {
+        "selected_category": { "type": "string", "__example__": "skirt" },
+        "variantOptions": {
+        "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "string"
+                            },
+                            "title": {
+                                "type": "string"
+                            }
+                        }
+                        },
+        "__example__": [
+          { 
+            "id": "SKU-SKIRT-001",
+             "title": "Skirt — Pleated — Black — S" },
+          { "id": "SKU-SKIRT-002", "title": "Skirt — Pleated — Black — M" }
+        ]
+      }
+
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          { "type": "TextHeading", "text": "Create a new order" },
+          {
+            "type": "Form",
+            "name": "new_order_form",
+            "children": [
+              { "type": "TextInput", "label": "Customer name", "name": "cust_name", "required": true },
+              { "type": "TextInput", "label": "Phone", "name": "cust_phone", "required": true },
+              { "type": "TextInput", "label": "Email", "name": "cust_email" },
+              { "type": "TextArea",  "label": "Address", "name": "cust_address" },
+              { "type": "DatePicker", "label": "Fulfillment date", "name": "fulfillment_date" },
+
+              {
+                "type": "ChipsSelector",
+                "label": "Item category",
+                "name": "item_category",
+                "max-selected-items": 1,
+                "data-source": [
+                  { "id": "dress", "title": "Dress" },
+                  { "id": "shirt", "title": "Shirt" },
+                  { "id": "jeans", "title": "Jeans" },
+                  { "id": "skirt", "title": "Skirt" },
+                  { "id": "jacket", "title": "Jacket" },
+                  { "id": "kurta", "title": "Kurta" },
+                  { "id": "saree", "title": "Saree" },
+                  { "id": "accessory", "title": "Accessory" }
+                ],
+                "on-select-action": {
+                  "name": "data_exchange",
+                  "payload": {
+                    "selected_category": "${form.item_category}"
+                  }
+                }
+              },
+
+              {
+                "type": "Dropdown",
+                "label": "Item variant",
+                "name": "item_variant",
+                "required": true,
+                "data-source": "${data.variantOptions}"
+              },
+
+              { "type": "Dropdown", "label": "Size", "name": "size", "data-source": [
+                { "id": "S", "title": "Small" },
+                { "id": "M", "title": "Medium" },
+                { "id": "L", "title": "Large" },
+                { "id": "XL", "title": "X-Large" }
+              ]},
+              { "type": "Dropdown", "label": "Color", "name": "color", "data-source": [
+                { "id": "black", "title": "Black" },
+                { "id": "white", "title": "White" },
+                { "id": "blue", "title": "Blue" },
+                { "id": "red", "title": "Red" },
+                { "id": "green", "title": "Green" }
+              ]},
+              { "type": "TextInput", "label": "Quantity", "name": "quantity" },
+              { "type": "TextInput", "label": "Unit price (₹)", "name": "unit_price" },
+              { "type": "TextArea",  "label": "Order note", "name": "notes", "max-length": 250 }
+            ]
+          },
+          {
+            "type": "Footer",
+            "label": "Complete",
+            "on-click-action": {
+              "name": "complete",
+              "payload": {
+                "new_order": {
+                  "customer": { "name": "${form.cust_name}", "phone": "${form.cust_phone}", "email": "${form.cust_email}", "address": "${form.cust_address}" },
+                  "fulfillment_date": "${form.fulfillment_date}",
+                  "category": "${form.item_category}",
+                  "item_variant": "${form.item_variant}",
+                  "size": "${form.size}",
+                  "color": "${form.color}",
+                  "quantity": "${form.quantity}",
+                  "unit_price": "${form.unit_price}",
+                  "notes": "${form.notes}"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+
+    {
+      "id": "MANAGE_INVENTORY",
+      "title": "Manage Boutique Inventory",
+      "terminal": true,
+      "success": true,
+      "data": {
+        "headingText": { "type": "string", "__example__": "Update items & stock" },
+         "variantOptions": {
+        "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "string"
+                            },
+                            "title": {
+                                "type": "string"
+                            }
+                        }
+                        },
+        "__example__": [
+          { 
+            "id": "SKU-SKIRT-001",
+             "title": "Skirt — Pleated — Black — S" },
+          { "id": "SKU-SKIRT-002", "title": "Skirt — Pleated — Black — M" }
+        ]
+      }
+
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          { "type": "TextHeading", "text": "${data.headingText}" },
+          {
+            "type": "Form",
+            "name": "inventory_form",
+            "children": [
+              { "type": "ChipsSelector", "label": "Product category", "name": "product", "max-selected-items": 1, "data-source": [
+                { "id": "dress", "title": "Dress" },
+                { "id": "shirt", "title": "Shirt" },
+                { "id": "jeans", "title": "Jeans" },
+                { "id": "skirt", "title": "Skirt" },
+                { "id": "jacket", "title": "Jacket" },
+                { "id": "kurta", "title": "Kurta" },
+                { "id": "saree", "title": "Saree" },
+                { "id": "accessory", "title": "Accessory" }
+              ]},
+              {
+                "type": "Dropdown",
+                "label": "Item variant",
+                "name": "item_variant",
+                "required": true,
+                "data-source": "${data.variantOptions}"
+              },
+              { "type": "Dropdown", "label": "Action", "name": "action", "data-source": [
+                { "id": "add", "title": "Add stock" },
+                { "id": "remove", "title": "Remove stock" },
+                { "id": "set", "title": "Set absolute quantity" }
+              ]},
+              { "type": "TextInput", "label": "Quantity", "name": "qty", "helper-text": "Enter the latest quantity", "required": true },
+              { "type": "TextArea",  "label": "Notes", "name": "inv_notes", "max-length": 200 }
+            ]
+          },
+          {
+            "type": "Footer",
+            "label": "Complete",
+            "on-click-action": {
+              "name": "complete",
+              "payload": {
+                "inventory_update": { "category": "${form.product}", "action": "${form.action}", "qty": "${form.qty}", "notes": "${form.inv_notes}" }
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
