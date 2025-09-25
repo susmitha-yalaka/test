@@ -60,6 +60,7 @@ async def processingDecryptedData_boutique(
       - NEW_ORDER:  data_exchange(selected_category) -> {variantOptions:[...]} ; initial -> empty list
       - MANAGE_INVENTORY: static
     """
+    print(f"dd{dd}")
     if dd.action == "ping":
         return {"version": "3.0", "data": {"status": "active"}}
 
@@ -125,6 +126,7 @@ async def boutique_flow_handler(
             request.initial_vector,
         )
         decrypted_data = DecryptedRequestData(**decryptedDataDict)
+        print(f"decrypted_data{decrypted_data}")
         response_dict = await processingDecryptedData_boutique(decrypted_data, db)
         encrypted_response = encryptResponse(response_dict, aes_key, iv)
         return Response(content=encrypted_response, media_type="application/octet-stream")
