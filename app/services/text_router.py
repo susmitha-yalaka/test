@@ -1,5 +1,4 @@
 # app/services/text_router.py
-import re
 from typing import Awaitable, Callable, Dict
 from app.services.text_handlers import (
     handle_hi, handle_hello, handle_fallback

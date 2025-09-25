@@ -1,17 +1,10 @@
 # app/services/text_handlers.py
-import re
 import logging
-from typing import Optional, Tuple
 
 from app.services.wa import send_text, send_interactive
 from app.flows_operations.services.flow_service import waiter_flow
 
 log = logging.getLogger(__name__)
-
-# ---------- helpers ----------
-
-_TOKEN_RX = re.compile(r"#\s*([A-Za-z0-9_\-]+)")
-_RESTAURANT_RX = re.compile(r"\bat\s+(.+?)(?:,|#|$)", flags=re.IGNORECASE)
 
 
 async def handle_hi(to: str, msg_id: str, raw_text: str) -> None:
@@ -30,3 +23,11 @@ async def handle_hi(to: str, msg_id: str, raw_text: str) -> None:
 
 async def handle_hello(to: str, msg_id: str, raw_text: str) -> None:
     await send_text(to, "hello, how can we help you?", msg_id)
+
+
+async def handle_fallback(to: str, msg_id: str, raw_text: str) -> None:
+    await send_text(
+        to,
+        "Try *hi*, *hello*, *menu*, *login*, or send: 'Hi, I am at <Restaurant>, # <token>'.",
+        msg_id,
+    )
