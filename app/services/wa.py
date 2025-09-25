@@ -130,6 +130,9 @@ def _read_receipt(message_id: str) -> dict:
         "messaging_product": "whatsapp",
         "status": "read",
         "message_id": message_id,
+        "typing_indicator": {
+            "type": "text",
+        },
     }
 
 

@@ -1,15 +1,14 @@
 # app/main.py
 import logging
 from fastapi import FastAPI
+from app.core.logconfig import configure_logging
 from app.routers import orders, inventory, products, webhook
 from app.flows_operations.routers import test_flow
 from app.core.database import init_db, check_db_connection
 
-# Basic logging config (uvicorn adds its own handlers, this complements it)
-logging.basicConfig(
-    level=logging.INFO,  # change with LOG_LEVEL env var if you like
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-)
+# Basic logging config
+configure_logging()
+
 
 app = FastAPI(title="Boutique Flow Backend", version="1.0.0")
 

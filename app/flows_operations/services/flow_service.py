@@ -23,7 +23,7 @@ def waiter_flow(to_number: str) -> FlowMessage:
                     flow_token="biz_boutique",
                     flow_cta="Start",
                     flow_id=config.FLOW_ID,
-                    flow_action_payload=InteractiveActionParametersFlowActionPayload(screen="SELECT_TABLE"),
+                    flow_action_payload=InteractiveActionParametersFlowActionPayload(screen="CHOOSE_NAV"),
                 )
             ),
         ),
