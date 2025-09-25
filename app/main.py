@@ -18,7 +18,8 @@ app.include_router(test_flow.router, prefix="/flows", tags=["flows"])
 app.include_router(orders.router, prefix="/orders", tags=["orders"])
 app.include_router(inventory.router, prefix="/inventory", tags=["inventory"])
 app.include_router(products.router, prefix="/products", tags=["products"])
-app.include_router(webhook.router, prefix="/products", tags=["webhook"] )
+app.include_router(webhook.router, prefix="", tags=["webhook"])
+
 
 @app.on_event("startup")
 def on_startup():
