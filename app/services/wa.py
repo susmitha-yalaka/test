@@ -5,7 +5,7 @@ from typing import Tuple, Union
 import httpx
 
 from app.core import config
-from app.schema.flow import FlowMessage
+from app.flow_operations import FlowMessage
 from app.utils.datetime import now_ms_ist, now_str_ist
 
 # WhatsApp Graph API endpoints
