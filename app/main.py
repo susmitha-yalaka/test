@@ -13,5 +13,5 @@ app.include_router(products.router, prefix="/products", tags=["products"])
 
 
 @app.on_event("startup")
-async def on_startup():
-    await init_db()
+def on_startup():
+    init_db()
