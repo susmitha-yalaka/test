@@ -10,7 +10,7 @@ router = APIRouter()
 
 
 @router.get("", response_model=List[OrderOut])
-def list_orders(status: Optional[OrderStatus] = Query(default=None), db: Session = Depends(get_db)):
+def list_orders(db: Session = Depends(get_db), status: Optional[OrderStatus] = Query(default=None)):
     return orders_service.list_orders(db, status)
 
 
