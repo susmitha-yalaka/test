@@ -57,7 +57,7 @@ def list_orders(db: Session, status: Optional[OrderStatus] = None) -> List[Order
 
 
 def list_all_orders(db: Session) -> List[dict]:
-    q = db.query(Order).all()
+    q = db.query(Order)
     orders = q.order_by(Order.created_at.desc()).all()
 
     result = []
