@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from typing import List
 from app.core.database import get_db
-from app.services.products import list_categories, list_variants_by_category, upsert_category, upsert_variant
+from app.services.products import list_all_variants, list_categories, list_variants_by_category, upsert_category, upsert_variant
 from app.schemas import CategoryOut, VariantOut
 
 router = APIRouter()
@@ -15,6 +15,11 @@ def categories(db: Session = Depends(get_db)):
 
 
 @router.get("/variants", response_model=List[VariantOut])
+def all_variants(db: Session = Depends(get_db)):
+    return list_all_variants(db)
+
+
+@router.get("/variants_by_category", response_model=List[VariantOut])
 def variants(category: str, db: Session = Depends(get_db)):
     return list_variants_by_category(db, category)
 

@@ -3,9 +3,26 @@ from sqlalchemy.orm import Session
 from app.models import ProductCategory, ProductVariant
 from app.schemas import VariantOut
 
+
 def list_categories(db: Session):
     """Return all product categories (model instances)."""
     return db.query(ProductCategory).all()
+
+
+def list_all_variants(db: Session):
+    """
+    Return SKU variants for a category.
+    Router expects List[VariantOut], so we map here.
+    """
+    variants = (
+        db.query(ProductVariant)
+        .all()
+    )
+    return [
+        VariantOut(id=v.sku, title=v.title, size=v.size, color=v.color)
+        for v in variants
+    ]
+
 
 def list_variants_by_category(db: Session, category_id: str):
     """
@@ -22,6 +39,7 @@ def list_variants_by_category(db: Session, category_id: str):
         for v in variants
     ]
 
+
 def upsert_category(db: Session, id: str, title: str) -> ProductCategory:
     cat = db.query(ProductCategory).get(id)
     if not cat:
@@ -32,6 +50,7 @@ def upsert_category(db: Session, id: str, title: str) -> ProductCategory:
     db.commit()
     db.refresh(cat)
     return cat
+
 
 def upsert_variant(
     db: Session,

@@ -2,7 +2,7 @@
 import logging
 
 from app.services.wa import send_text, send_interactive
-from app.flows_operations.services.flow_service import waiter_flow
+from app.flows_operations.services.flow_service import seller_flow
 
 log = logging.getLogger(__name__)
 
@@ -13,7 +13,7 @@ async def handle_hi(to: str, msg_id: str, raw_text: str) -> None:
     fall back to a simple text if anything fails.
     """
     try:
-        flow_msg = waiter_flow(to)
+        flow_msg = seller_flow(to)
         payload = flow_msg.dict(exclude_none=True)
         await send_interactive(to, payload, msg_id)
     except Exception as e:
