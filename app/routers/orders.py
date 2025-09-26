@@ -14,6 +14,11 @@ def list_orders(db: Session = Depends(get_db), status: Optional[OrderStatus] = Q
     return orders_service.list_orders(db, status)
 
 
+@router.get("", response_model=List[OrderOut])
+def list_all_orders(db: Session = Depends(get_db), status: Optional[OrderStatus] = Query(default=None)):
+    return orders_service.list_all_orders(db, status)
+
+
 @router.post("", response_model=OrderOut, status_code=201)
 def create_order(order: OrderCreate, db: Session = Depends(get_db)):
     try:

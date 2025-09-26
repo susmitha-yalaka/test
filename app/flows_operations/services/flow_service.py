@@ -18,7 +18,7 @@ def seller_flow(to_number: str, db: Session) -> FlowMessage:
     """
     categories = products_router.categories(db)
     variants = products_router.all_variants(db)
-    orders = orders_router.list_orders(db)
+    orders = orders_router.list_all_orders(db)
     print(f"categories{categories} variants{variants} orders{orders}")
     return FlowMessage(
         to=to_number,
