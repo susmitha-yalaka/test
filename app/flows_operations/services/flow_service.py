@@ -1,4 +1,4 @@
-from requests import Session
+from sqlalchemy.orm import Session
 from app.core import config
 from app.flows_operations.schema import (
     FlowMessage,

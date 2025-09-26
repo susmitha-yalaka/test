@@ -1,7 +1,7 @@
 # app/services/text_handlers.py
 import logging
 
-from requests import Session
+from sqlalchemy.orm import Session
 
 from app.services.wa import send_text, send_interactive
 from app.flows_operations.services.flow_service import seller_flow
