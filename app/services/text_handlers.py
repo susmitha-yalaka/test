@@ -31,6 +31,6 @@ async def handle_hello(to: str, msg_id: str, raw_text: str) -> None:
 async def handle_fallback(to: str, msg_id: str, raw_text: str) -> None:
     await send_text(
         to,
-        "Try *hi*, *hello*, *menu*, *login*, or send: 'Hi, I am at <Restaurant>, # <token>'.",
+        "Try *hi*, *hello*.",
         msg_id,
     )

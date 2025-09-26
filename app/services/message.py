@@ -3,7 +3,7 @@ import logging
 from typing import Any, Dict, Set
 from app.core import config
 from app.services.handlers import request_handlers
-from app.utils.datetime import now_ms_ist, now_str_ist  # <-- go to handlers first
+from app.utils.datetime import now_ms_ist, now_str_ist
 
 log = logging.getLogger("services.message_logic")
 _seen_message_ids: Set[str] = set()
@@ -33,7 +33,7 @@ async def handle_webhook_event(body: Dict[str, Any]) -> None:
                     continue
 
                 # -------- route by WhatsApp message type --------
-                msg_type = msg.get("type")  # e.g., "text", "interactive", "button", "location"
+                msg_type = msg.get("type")
                 handler = request_handlers.get(msg_type)
                 if not handler:
                     # unknown/unsupported type → ignore or log
