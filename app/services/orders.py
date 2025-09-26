@@ -56,12 +56,8 @@ def list_orders(db: Session, status: Optional[OrderStatus] = None) -> List[Order
     return [get_order_out(db, o.id) for o in orders]
 
 
-def list_all_orders(db: Session, status: Optional[OrderStatus] = None) -> List[dict]:
-    q = db.query(Order)
-
-    if status:
-        q = q.filter(Order.status == status)
-
+def list_all_orders(db: Session) -> List[dict]:
+    q = db.query(Order).all()
     orders = q.order_by(Order.created_at.desc()).all()
 
     result = []
