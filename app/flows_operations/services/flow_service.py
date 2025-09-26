@@ -1,3 +1,4 @@
+from requests import Session
 from app.core import config
 from app.flows_operations.schema import (
     FlowMessage,
@@ -11,13 +12,13 @@ from app.routers import products as products_router
 from app.routers import orders as orders_router
 
 
-def seller_flow(to_number: str) -> FlowMessage:
+def seller_flow(to_number: str, db: Session) -> FlowMessage:
     """
     Build the interactive flow message
     """
-    categories = products_router.categories
-    variants = products_router.all_variants
-    orders = orders_router.list_orders
+    categories = products_router.categories(db)
+    variants = products_router.all_variants(db)
+    orders = orders_router.list_orders(db)
     print(f"categories{categories} variants{variants} orders{orders}")
     return FlowMessage(
         to=to_number,
