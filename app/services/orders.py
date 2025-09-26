@@ -56,6 +56,24 @@ def list_orders(db: Session, status: Optional[OrderStatus] = None) -> List[Order
     return [get_order_out(db, o.id) for o in orders]
 
 
+def list_all_orders(db: Session, status: Optional[OrderStatus] = None) -> List[dict]:
+    q = db.query(Order)
+
+    if status:
+        q = q.filter(Order.status == status)
+
+    orders = q.order_by(Order.created_at.desc()).all()
+
+    result = []
+    for o in orders:
+        result.append({
+            "id": o.id,
+            "title": f"Id-{o.id}",
+            "metadata": f"{o.status} - {o.created_at}"
+        })
+    return result
+
+
 def get_order_out(db: Session, order_id: str) -> OrderOut:
     o = db.query(Order).get(order_id)
     if not o:
