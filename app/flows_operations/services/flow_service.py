@@ -18,6 +18,7 @@ def seller_flow(to_number: str) -> FlowMessage:
     categories = products_router.categories
     variants = products_router.all_variants
     orders = orders_router.list_orders
+    print(f"categories{categories} variants{variants} orders{orders}")
     return FlowMessage(
         to=to_number,
         interactive=Interactive(
