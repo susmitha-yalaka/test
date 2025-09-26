@@ -15,6 +15,7 @@ async def handle_hi(to: str, msg_id: str, raw_text: str) -> None:
     try:
         flow_msg = seller_flow(to)
         payload = flow_msg.dict(exclude_none=True)
+        print(f"payload{payload}")
         await send_interactive(to, payload, msg_id)
     except Exception as e:
         log.exception("Failed to send interactive flow: %s", e)
