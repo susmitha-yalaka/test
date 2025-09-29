@@ -136,7 +136,7 @@ async def processingDecryptedData_boutique(dd: DecryptedRequestData, db: Session
         return {
             "version": "3.0",
             "screen": "CHOOSE_NAV",
-            "data": {"categories": categories, "items": items, "orders": _map_orders(all_orders)},
+            "data": {"categories": categories, "items": items, "orders": _map_orders(all_orders), "shipping_status": categories},
         }
 
     # VIEW_ORDER
