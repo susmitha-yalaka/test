@@ -18,7 +18,7 @@ class RequestData(BaseModel):
 
 
 class DecryptedRequestData(BaseModel):
-    version: str
+    version: int
     action: str
     screen: Optional[str] = None
     data: Optional[Dict] = Field(default_factory=dict)
