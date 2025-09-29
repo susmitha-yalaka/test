@@ -1,5 +1,8 @@
 # app/routers/test_flow.py
 from typing import Any, Dict, Optional, List
+import logging
+import traceback
+
 from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
 
@@ -15,6 +18,7 @@ from app.services import orders as orders_service
 from app.models import OrderStatus
 
 router = APIRouter()
+log = logging.getLogger("flows.boutique")  # configure handlers/levels in your logconfig
 
 # ---------- helpers ----------
 
@@ -85,10 +89,7 @@ def _format_order_rich_text(order) -> str:
         size = getattr(it, "size", None) or ""
         color = getattr(it, "color", None) or ""
         meta = " ".join([s for s in [size, color] if s]).strip()
-        if unit_price is not None:
-            line = f"• {title} x {qty} @ ₹{unit_price}"
-        else:
-            line = f"• {title} x {qty}"
+        line = f"• {title} x {qty}" + (f" @ ₹{unit_price}" if unit_price is not None else "")
         if meta:
             line += f" ({meta})"
         lines.append(line)
@@ -115,6 +116,8 @@ def _format_order_rich_text(order) -> str:
 
 
 async def processingDecryptedData_boutique(dd: DecryptedRequestData, db: Session) -> Dict[str, Any]:
+    log.debug("Flow request: action=%s screen=%s", dd.action, dd.screen)
+
     if dd.action == "ping":
         return {"version": "3.0", "data": {"status": "active"}}
 
@@ -128,6 +131,8 @@ async def processingDecryptedData_boutique(dd: DecryptedRequestData, db: Session
         categories = _map_categories(products_service.list_categories(db))
         items = _all_variant_options_via_services(db)
         all_orders = orders_service.list_orders(db, status=None)
+        log.debug("CHOOSE_NAV hydrated: %d categories, %d items, %d orders",
+                  len(categories), len(items), len(all_orders))
         return {
             "version": "3.0",
             "screen": "CHOOSE_NAV",
@@ -136,36 +141,42 @@ async def processingDecryptedData_boutique(dd: DecryptedRequestData, db: Session
 
     # VIEW_ORDER
     if screen == "VIEW_ORDER":
+        log.debug("VIEW_ORDER: action=%s trigger=%s", action, trigger)
+
         # filter by status
         if action == "data_exchange" and trigger == "filter_by_category":
             status_raw = data_in.get("category") or "ALL"
             status_enum = _status_from_any(status_raw)
             filtered = orders_service.list_orders(db, status_enum)
+            log.debug("VIEW_ORDER filter: status=%s -> %d orders", status_raw, len(filtered))
             return {"version": "3.0", "data": {"orders": _map_orders(filtered)}}
 
-        # select order (no UI change, just acknowledge)
+        # select order
         if action == "data_exchange" and trigger == "select_order":
+            log.debug("VIEW_ORDER selected order: %s", data_in.get("orderId"))
             return {"version": "3.0", "data": {}}
 
         # view_order → navigate to details screen
         if action == "data_exchange" and trigger == "view_order":
             order_id = data_in.get("orderId")
+            log.debug("VIEW_ORDER view_order: orderId=%s", order_id)
             if not order_id:
                 return {"version": "3.0", "data": {}}
             try:
                 order = orders_service.get_order_out(db, order_id)
                 detail = _format_order_rich_text(order)
             except Exception:
+                log.exception("Failed to load order details for id=%s", order_id)
                 detail = "Unable to load order details."
             return {"version": "3.0", "screen": "VIEW_ORDER_DETAILS", "data": {"order_detail_text": detail}}
 
         # initial load
         all_orders = orders_service.list_orders(db, status=None)
+        log.debug("VIEW_ORDER initial: %d orders", len(all_orders))
         return {"version": "3.0", "screen": "VIEW_ORDER", "data": {"orders": _map_orders(all_orders)}}
 
     # VIEW_ORDER_DETAILS (direct load allowed)
     if screen == "VIEW_ORDER_DETAILS":
-        # If you want to re-fetch based on a provided order_id (optional):
         order_id = data_in.get("orderId")
         if order_id:
             try:
@@ -173,17 +184,18 @@ async def processingDecryptedData_boutique(dd: DecryptedRequestData, db: Session
                 detail = _format_order_rich_text(order)
                 return {"version": "3.0", "screen": "VIEW_ORDER_DETAILS", "data": {"order_detail_text": detail}}
             except Exception:
-                pass
-        # Otherwise, just render whatever data RichText already has
+                log.exception("Failed to load order details (direct) for id=%s", order_id)
         return {"version": "3.0", "screen": "VIEW_ORDER_DETAILS", "data": data_in}
 
     # MANAGE_INVENTORY
     if screen == "MANAGE_INVENTORY":
         categories = _map_categories(products_service.list_categories(db))
         items = _all_variant_options_via_services(db)
+        log.debug("MANAGE_INVENTORY hydrated: %d categories, %d items", len(categories), len(items))
         return {"version": "3.0", "screen": "MANAGE_INVENTORY", "data": {"categories": categories, "items": items}}
 
     # Fallback
+    log.debug("Fallback screen: %s", screen)
     return {"version": "3.0", "screen": screen or "CHOOSE_NAV", "data": {}}
 
 # ---------- encrypted endpoint ----------
@@ -194,6 +206,7 @@ async def boutique_flow_handler(
     request: RequestData,
     db: Session = Depends(get_db),
 ):
+    decrypted_data: Optional[DecryptedRequestData] = None
     try:
         decryptedDataDict, aes_key, iv = decryptRequest(
             request.encrypted_flow_data,
@@ -201,8 +214,26 @@ async def boutique_flow_handler(
             request.initial_vector,
         )
         decrypted_data = DecryptedRequestData(**decryptedDataDict)
+        log.debug("Decrypted flow: action=%s screen=%s", decrypted_data.action, decrypted_data.screen)
+
         response_dict = await processingDecryptedData_boutique(decrypted_data, db)
         encrypted_response = encryptResponse(response_dict, aes_key, iv)
         return Response(content=encrypted_response, media_type="application/octet-stream")
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        # Log full stack trace to your handlers (file/console), plus helpful context
+        log.exception(
+            "Flow processing failed: action=%s screen=%s",
+            getattr(decrypted_data, "action", None),
+            getattr(decrypted_data, "screen", None),
+        )
+        # Return structured error detail
+        tb = traceback.format_exc()
+        detail = {
+            "error": str(e),
+            "exception_type": e.__class__.__name__,
+            "screen": getattr(decrypted_data, "screen", None),
+            "action": getattr(decrypted_data, "action", None),
+            "trace": tb.splitlines()[:2],  # short preview; full trace is in logs
+        }
+        raise HTTPException(status_code=500, detail=detail)
