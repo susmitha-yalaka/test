@@ -3,11 +3,11 @@ from typing import Awaitable, Callable, Dict, Iterator
 from contextlib import contextmanager
 from sqlalchemy.orm import Session
 from app.core.database import get_db
-from app.services.text_handlers import handle_hi, handle_hello, handle_fallback
+from app.services.text_handlers import handle_hi, handle_fallback
 
 TextHandler = Callable[[str, str, str, Session], Awaitable[None]]
 
-COMMANDS: Dict[str, TextHandler] = {"hi": handle_hi, "hello": handle_hello}
+COMMANDS: Dict[str, TextHandler] = {"hi": handle_hi}
 
 
 @contextmanager
@@ -26,4 +26,4 @@ async def route_text(to_number: str, msg_id: str, raw_text: str):
     with db_session() as db:
         if handler:
             return await handler(to_number, msg_id, raw_text, db)
-        return await handle_fallback(to_number, msg_id, raw_text, db)
+        return await handle_fallback(to_number, msg_id, raw_text)

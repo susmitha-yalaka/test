@@ -16,6 +16,8 @@ from app.models import OrderStatus
 
 router = APIRouter()
 
+# ---------- helpers ----------
+
 
 def _status_from_any(v: Optional[str]) -> Optional[OrderStatus]:
     if not v or v == "ALL":
@@ -26,8 +28,21 @@ def _status_from_any(v: Optional[str]) -> Optional[OrderStatus]:
         return None
 
 
-def _order_options(orders) -> List[Dict[str, str]]:
-    """Map OrderOut/ORM -> [{id, title}]"""
+def _map_categories(cats) -> List[Dict[str, str]]:
+    return [{"id": getattr(c, "id", ""), "title": getattr(c, "title", "")} for c in cats]
+
+
+def _map_variants(variants) -> List[Dict[str, str]]:
+    out: List[Dict[str, str]] = []
+    for v in variants:
+        vid = getattr(v, "sku", None) or getattr(v, "id", None)
+        title = getattr(v, "title", None)
+        if vid and title:
+            out.append({"id": vid, "title": title})
+    return out
+
+
+def _map_orders(orders) -> List[Dict[str, str]]:
     opts: List[Dict[str, str]] = []
     for o in orders:
         oid = getattr(o, "id", None)
@@ -38,87 +53,147 @@ def _order_options(orders) -> List[Dict[str, str]]:
     return opts
 
 
-def _variant_options(variants) -> List[Dict[str, str]]:
-    """Map VariantOut/ORM -> [{id, title}] (id=sku)"""
-    out: List[Dict[str, str]] = []
-    for v in variants:
-        vid = getattr(v, "sku", None) or getattr(v, "id", None)
-        title = getattr(v, "title", None)
-        if vid and title:
-            out.append({"id": vid, "title": title})
-    return out
+def _all_variant_options_via_services(db: Session) -> List[Dict[str, str]]:
+    items: List[Dict[str, str]] = []
+    cats = products_service.list_categories(db)
+    for c in cats:
+        cid = getattr(c, "id", None)
+        if not cid:
+            continue
+        vs = products_service.list_variants_by_category(db, cid)
+        items.extend(_map_variants(vs))
+    return items
 
 
-async def processingDecryptedData_boutique(
-    dd: DecryptedRequestData,
-    db: Session,  # <-- DB provided by Depends(get_db)
-) -> Dict[str, Any]:
-    """
-    WhatsApp Flow handler:
-      - CHOOSE_NAV: static
-      - VIEW_ORDER: initial -> all orders; data_exchange(status) -> filtered {orderOptions:[...]}
-      - NEW_ORDER:  data_exchange(selected_category) -> {variantOptions:[...]} ; initial -> empty list
-      - MANAGE_INVENTORY: static
-    """
-    print(f"dd{dd}")
+def _format_order_rich_text(order) -> str:
+    oid = getattr(order, "id", "")
+    status = getattr(order, "status", "")
+    created_at = getattr(order, "created_at", "")
+    cname = getattr(order, "customer_name", "")
+    cphone = getattr(order, "customer_phone", "")
+    cemail = getattr(order, "customer_email", "") or ""
+    caddr = getattr(order, "customer_address", "") or ""
+    fdate = getattr(order, "fulfillment_date", "") or ""
+    note = getattr(order, "note", "") or ""
+
+    items = getattr(order, "items", []) or []
+    lines = []
+    for it in items:
+        title = getattr(it, "title", getattr(it, "sku", ""))
+        qty = getattr(it, "quantity", 0)
+        unit_price = getattr(it, "unit_price", None)
+        size = getattr(it, "size", None) or ""
+        color = getattr(it, "color", None) or ""
+        meta = " ".join([s for s in [size, color] if s]).strip()
+        if unit_price is not None:
+            line = f"• {title} x {qty} @ ₹{unit_price}"
+        else:
+            line = f"• {title} x {qty}"
+        if meta:
+            line += f" ({meta})"
+        lines.append(line)
+
+    items_block = "<br/>".join(lines) if lines else "—"
+    try:
+        total = sum((getattr(it, "unit_price", 0) or 0) * (getattr(it, "quantity", 0) or 0) for it in items)
+    except Exception:
+        total = 0
+
+    parts = [
+        f"<b>Order:</b> {oid} &nbsp; <b>Status:</b> {status}<br/>",
+        f"<b>Created:</b> {created_at} &nbsp; <b>Fulfillment:</b> {fdate}<br/><br/>",
+        "<b>Customer</b><br/>",
+        f"{cname}<br/>{cphone}<br/>{cemail}<br/>{caddr}<br/><br/>",
+        f"<b>Items</b><br/>{items_block}<br/><br/>",
+        f"<b>Estimated Total:</b> ₹{total}<br/>",
+    ]
+    if note:
+        parts.append(f"<br/><b>Note:</b> {note}")
+    return "".join(parts)
+
+# ---------- main flow logic ----------
+
+
+async def processingDecryptedData_boutique(dd: DecryptedRequestData, db: Session) -> Dict[str, Any]:
     if dd.action == "ping":
         return {"version": "3.0", "data": {"status": "active"}}
 
     screen: str = dd.screen or ""
     data_in: Dict[str, Any] = dd.data or {}
     action: Optional[str] = dd.action
+    trigger: Optional[str] = (data_in.get("trigger") or "").strip() or None
 
-    # ---- CHOOSE_NAV ----
+    # CHOOSE_NAV → hydrate everything
     if screen == "CHOOSE_NAV":
-        print("inside 1st screen")
-        return {"version": "3.0", "screen": "CHOOSE_NAV", "data": {}}
+        categories = _map_categories(products_service.list_categories(db))
+        items = _all_variant_options_via_services(db)
+        all_orders = orders_service.list_orders(db, status=None)
+        return {
+            "version": "3.0",
+            "screen": "CHOOSE_NAV",
+            "data": {"categories": categories, "items": items, "orders": _map_orders(all_orders)},
+        }
 
-    # ---- VIEW_ORDER ----
+    # VIEW_ORDER
     if screen == "VIEW_ORDER":
-        print("inside view order")
-        status_raw = data_in.get("status") or data_in.get("status_filter") or "ALL"
-        status_enum = _status_from_any(status_raw)
+        # filter by status
+        if action == "data_exchange" and trigger == "filter_by_category":
+            status_raw = data_in.get("category") or "ALL"
+            status_enum = _status_from_any(status_raw)
+            filtered = orders_service.list_orders(db, status_enum)
+            return {"version": "3.0", "data": {"orders": _map_orders(filtered)}}
 
-        orders = orders_service.list_orders(db, status_enum)
-        options = _order_options(orders)
+        # select order (no UI change, just acknowledge)
+        if action == "data_exchange" and trigger == "select_order":
+            return {"version": "3.0", "data": {}}
 
-        if action == "data_exchange":
-            print("inside data exchange")
-            return {"version": "3.0", "data": {"orderOptions": options}}
+        # view_order → navigate to details screen
+        if action == "data_exchange" and trigger == "view_order":
+            order_id = data_in.get("orderId")
+            if not order_id:
+                return {"version": "3.0", "data": {}}
+            try:
+                order = orders_service.get_order_out(db, order_id)
+                detail = _format_order_rich_text(order)
+            except Exception:
+                detail = "Unable to load order details."
+            return {"version": "3.0", "screen": "VIEW_ORDER_DETAILS", "data": {"order_detail_text": detail}}
 
-        return {"version": "3.0", "screen": "VIEW_ORDER", "data": {"orderOptions": options}}
+        # initial load
+        all_orders = orders_service.list_orders(db, status=None)
+        return {"version": "3.0", "screen": "VIEW_ORDER", "data": {"orders": _map_orders(all_orders)}}
 
-    # ---- NEW_ORDER ----
-    if screen == "NEW_ORDER":
-        selected_category = (
-            data_in.get("selected_category")
-            or data_in.get("item_category")
-            or ""
-        )
+    # VIEW_ORDER_DETAILS (direct load allowed)
+    if screen == "VIEW_ORDER_DETAILS":
+        # If you want to re-fetch based on a provided order_id (optional):
+        order_id = data_in.get("orderId")
+        if order_id:
+            try:
+                order = orders_service.get_order_out(db, order_id)
+                detail = _format_order_rich_text(order)
+                return {"version": "3.0", "screen": "VIEW_ORDER_DETAILS", "data": {"order_detail_text": detail}}
+            except Exception:
+                pass
+        # Otherwise, just render whatever data RichText already has
+        return {"version": "3.0", "screen": "VIEW_ORDER_DETAILS", "data": data_in}
 
-        if action == "data_exchange" and selected_category:
-            variants = products_service.list_variants_by_category(db, selected_category)
-            options = _variant_options(variants)
-            return {"version": "3.0", "data": {"variantOptions": options}}
-
-        return {"version": "3.0", "screen": "NEW_ORDER", "data": {"variantOptions": []}}
-
-    # ---- MANAGE_INVENTORY ----
+    # MANAGE_INVENTORY
     if screen == "MANAGE_INVENTORY":
-        return {"version": "3.0", "screen": "MANAGE_INVENTORY", "data": {}}
+        categories = _map_categories(products_service.list_categories(db))
+        items = _all_variant_options_via_services(db)
+        return {"version": "3.0", "screen": "MANAGE_INVENTORY", "data": {"categories": categories, "items": items}}
 
-    # ---- Fallback ----
+    # Fallback
     return {"version": "3.0", "screen": screen or "CHOOSE_NAV", "data": {}}
+
+# ---------- encrypted endpoint ----------
 
 
 @router.post("/boutiqueFlow")
 async def boutique_flow_handler(
     request: RequestData,
-    db: Session = Depends(get_db),  # <-- inject here
+    db: Session = Depends(get_db),
 ):
-    """
-    Encrypted endpoint: decrypt -> process -> encrypt.
-    """
     try:
         decryptedDataDict, aes_key, iv = decryptRequest(
             request.encrypted_flow_data,
@@ -126,7 +201,6 @@ async def boutique_flow_handler(
             request.initial_vector,
         )
         decrypted_data = DecryptedRequestData(**decryptedDataDict)
-        print(f"decrypted_data{decrypted_data}")
         response_dict = await processingDecryptedData_boutique(decrypted_data, db)
         encrypted_response = encryptResponse(response_dict, aes_key, iv)
         return Response(content=encrypted_response, media_type="application/octet-stream")

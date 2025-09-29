@@ -24,8 +24,8 @@ async def handle_hi(to: str, msg_id: str, raw_text: str, db: Session) -> None:
         await send_text(to, "👋 Hi! Send: 'Hi, I am at <Restaurant>, # <token>'", msg_id)
 
 
-async def handle_hello(to: str, msg_id: str, raw_text: str) -> None:
-    await send_text(to, "hello, how can we help you?", msg_id)
+# async def handle_hello(to: str, msg_id: str, raw_text: str, db: Session) -> None:
+#     await send_text(to, "hello, how can we help you?", msg_id)
 
 
 async def handle_fallback(to: str, msg_id: str, raw_text: str) -> None:
