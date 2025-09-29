@@ -214,6 +214,7 @@ async def boutique_flow_handler(
             request.initial_vector,
         )
         decrypted_data = DecryptedRequestData(**decryptedDataDict)
+        print(f"decrypted_data{decrypted_data}")
         log.debug("Decrypted flow: action=%s screen=%s", decrypted_data.action, decrypted_data.screen)
 
         response_dict = await processingDecryptedData_boutique(decrypted_data, db)
