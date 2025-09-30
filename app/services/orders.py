@@ -53,6 +53,7 @@ def list_orders(db: Session, status: Optional[OrderStatus] = None) -> List[Order
     if status:
         q = q.filter(Order.status == status)
     orders = q.order_by(Order.created_at.desc()).all()
+    print(f"orders{orders}")
     return [get_order_out(db, o.id) for o in orders]
 
 

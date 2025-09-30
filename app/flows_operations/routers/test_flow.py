@@ -18,7 +18,7 @@ from app.services import orders as orders_service
 from app.models import OrderStatus
 
 router = APIRouter()
-log = logging.getLogger("flows.boutique")  # configure handlers/levels in your logconfig
+log = logging.getLogger("flows.boutique")
 
 # ---------- helpers ----------
 
