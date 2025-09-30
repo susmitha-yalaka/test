@@ -11,15 +11,21 @@ _LOG_FILES = {
     "routers.webhook":        "logs/webhook.log",
     "services.message_logic": "logs/message_logic.log",
     "app.whatsapp":           "logs/whatsapp.log",
+    "routers.products":  "logs/routers_products.log",
+    "routers.inventory": "logs/routers_inventory.log",
+    "routers.orders":    "logs/routers_orders.log",
 }
 
 _LOG_LEVELS = {
     "app.main": "INFO",
     "app.db": "INFO",
-    "flows.boutique": "DEBUG",         # verbose flow debugging
+    "flows.boutique": "DEBUG",
     "routers.webhook": "INFO",
     "services.message_logic": "INFO",
     "app.whatsapp": "INFO",
+    "routers.products":  "INFO",
+    "routers.inventory": "INFO",
+    "routers.orders":    "INFO",
 }
 
 
