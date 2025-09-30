@@ -16,6 +16,7 @@ log = logging.getLogger("routers.orders")
 def list_orders(db: Session = Depends(get_db), status: Optional[OrderStatus] = Query(default=None)):
     log.debug("GET /orders | status=%s", status)
     resp = orders_service.list_orders(db, status)
+    print(f"resp{resp}")
     log.info("Returned %d orders (status=%s)", len(resp), status or "ALL")
     return resp
 

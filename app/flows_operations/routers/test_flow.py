@@ -147,7 +147,9 @@ async def processingDecryptedData_boutique(dd: DecryptedRequestData, db: Session
         if action == "data_exchange" and trigger == "filter_by_category":
             status_raw = data_in.get("category") or "ALL"
             status_enum = _status_from_any(status_raw)
+            print(f"status_enum{status_enum}")
             filtered = orders_router.list_orders(db, status_enum)
+            print(f"filtered{filtered}")
             log.debug("VIEW_ORDER filter: status=%s -> %d orders", status_raw, len(filtered))
             return {"version": "3.0", "data": {"orders": _map_orders(filtered)}}
 
