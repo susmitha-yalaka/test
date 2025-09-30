@@ -54,6 +54,7 @@ def _map_orders(orders) -> List[Dict[str, str]]:
         status = getattr(o, "status", "")
         if oid:
             opts.append({"id": oid, "title": f"{oid} — {name} ({status})"})
+    print(f"opts{opts}")
     return opts
 
 
@@ -151,6 +152,7 @@ async def processingDecryptedData_boutique(dd: DecryptedRequestData, db: Session
             filtered = orders_router.list_orders(db, status_enum)
             print(f"filtered{filtered}")
             log.debug("VIEW_ORDER filter: status=%s -> %d orders", status_raw, len(filtered))
+            print(f"_map_orders(filtered){_map_orders(filtered)}")
             return {"version": "3.0", "data": {"orders": _map_orders(filtered)}}
 
         # select order
