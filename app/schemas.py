@@ -1,6 +1,6 @@
 from datetime import date, datetime
 from typing import Optional, List
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from app.models import OrderStatus
 
 # ----- Products / Inventory -----
@@ -73,6 +73,7 @@ class OrderOut(BaseModel):
     fulfillment_date: Optional[date]
     note: Optional[str]
     items: List[OrderOutItem]
+    model_config = ConfigDict(use_enum_values=True)
 
 
 class OrderStatusUpdate(BaseModel):
