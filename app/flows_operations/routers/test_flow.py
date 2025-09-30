@@ -13,8 +13,8 @@ from app.core.encryptDecrypt import (
     encryptResponse,
 )
 from app.core.database import get_db
-from app.services import products as products_router
-from app.services import orders as orders_router
+from app.routers import products as products_router
+from app.routers import orders as orders_router
 from app.models import OrderStatus
 
 router = APIRouter()
