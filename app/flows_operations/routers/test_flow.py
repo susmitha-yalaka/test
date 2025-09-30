@@ -13,8 +13,8 @@ from app.core.encryptDecrypt import (
     encryptResponse,
 )
 from app.core.database import get_db
-from app.services import products as products_service
-from app.services import orders as orders_service
+from app.services import products as products_router
+from app.services import orders as orders_router
 from app.models import OrderStatus
 
 router = APIRouter()
@@ -59,12 +59,12 @@ def _map_orders(orders) -> List[Dict[str, str]]:
 
 def _all_variant_options_via_services(db: Session) -> List[Dict[str, str]]:
     items: List[Dict[str, str]] = []
-    cats = products_service.list_categories(db)
+    cats = products_router.list_categories(db)
     for c in cats:
         cid = getattr(c, "id", None)
         if not cid:
             continue
-        vs = products_service.list_variants_by_category(db, cid)
+        vs = products_router.list_variants_by_category(db, cid)
         items.extend(_map_variants(vs))
     return items
 
@@ -128,9 +128,9 @@ async def processingDecryptedData_boutique(dd: DecryptedRequestData, db: Session
 
     # CHOOSE_NAV → hydrate everything
     if screen == "CHOOSE_NAV":
-        categories = _map_categories(products_service.list_categories(db))
+        categories = _map_categories(products_router.list_categories(db))
         items = _all_variant_options_via_services(db)
-        all_orders = orders_service.list_orders(db, status=None)
+        all_orders = orders_router.list_orders(db, status=None)
         log.debug("CHOOSE_NAV hydrated: %d categories, %d items, %d orders",
                   len(categories), len(items), len(all_orders))
         return {
@@ -147,7 +147,7 @@ async def processingDecryptedData_boutique(dd: DecryptedRequestData, db: Session
         if action == "data_exchange" and trigger == "filter_by_category":
             status_raw = data_in.get("category") or "ALL"
             status_enum = _status_from_any(status_raw)
-            filtered = orders_service.list_orders(db, status_enum)
+            filtered = orders_router.list_orders(db, status_enum)
             log.debug("VIEW_ORDER filter: status=%s -> %d orders", status_raw, len(filtered))
             return {"version": "3.0", "data": {"orders": _map_orders(filtered)}}
 
@@ -163,7 +163,7 @@ async def processingDecryptedData_boutique(dd: DecryptedRequestData, db: Session
             if not order_id:
                 return {"version": "3.0", "data": {}}
             try:
-                order = orders_service.get_order_out(db, order_id)
+                order = orders_router.get_order_out(db, order_id)
                 detail = _format_order_rich_text(order)
             except Exception:
                 log.exception("Failed to load order details for id=%s", order_id)
@@ -171,7 +171,7 @@ async def processingDecryptedData_boutique(dd: DecryptedRequestData, db: Session
             return {"version": "3.0", "screen": "VIEW_ORDER_DETAILS", "data": {"order_detail_text": detail}}
 
         # initial load
-        all_orders = orders_service.list_orders(db, status=None)
+        all_orders = orders_router.list_orders(db, status=None)
         log.debug("VIEW_ORDER initial: %d orders", len(all_orders))
         return {"version": "3.0", "screen": "VIEW_ORDER", "data": {"orders": _map_orders(all_orders)}}
 
@@ -180,7 +180,7 @@ async def processingDecryptedData_boutique(dd: DecryptedRequestData, db: Session
         order_id = data_in.get("orderId")
         if order_id:
             try:
-                order = orders_service.get_order_out(db, order_id)
+                order = orders_router.get_order_out(db, order_id)
                 detail = _format_order_rich_text(order)
                 return {"version": "3.0", "screen": "VIEW_ORDER_DETAILS", "data": {"order_detail_text": detail}}
             except Exception:
@@ -189,7 +189,7 @@ async def processingDecryptedData_boutique(dd: DecryptedRequestData, db: Session
 
     # MANAGE_INVENTORY
     if screen == "MANAGE_INVENTORY":
-        categories = _map_categories(products_service.list_categories(db))
+        categories = _map_categories(products_router.list_categories(db))
         items = _all_variant_options_via_services(db)
         log.debug("MANAGE_INVENTORY hydrated: %d categories, %d items", len(categories), len(items))
         return {"version": "3.0", "screen": "MANAGE_INVENTORY", "data": {"categories": categories, "items": items}}
