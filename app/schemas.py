@@ -92,3 +92,9 @@ class DataExchangeIn(BaseModel):
 class DataExchangeOut(BaseModel):
     # We return an OBJECT with an 'options' array to satisfy your flow schema
     data: dict
+
+
+class DropDownOption(BaseModel):
+    id: str
+    status: str
+    model_config = ConfigDict(use_enum_values=True)

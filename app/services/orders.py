@@ -1,7 +1,7 @@
 from typing import List, Optional
 from sqlalchemy.orm import Session
 from app.models import Order, OrderItem, ProductVariant, ProductCategory, OrderStatus
-from app.schemas import OrderCreate, OrderOut, OrderOutItem, OrderStatusUpdate
+from app.schemas import DropDownOption, OrderCreate, OrderOut, OrderOutItem, OrderStatusUpdate
 
 
 def create_order(db: Session, payload: OrderCreate) -> OrderOut:
@@ -88,3 +88,17 @@ def get_order_out(db: Session, order_id: str) -> OrderOut:
         customer_email=o.customer_email, customer_address=o.customer_address,
         fulfillment_date=o.fulfillment_date, note=o.note, items=items
     )
+
+
+def orders_list_for_dropdown(db: Session, status: Optional[OrderStatus] = None) -> List[DropDownOption]:
+    q = db.query(Order)
+    if status:
+        q = q.filter(Order.status == status)
+    orders = q.order_by(Order.created_at.desc()).all()
+    return [
+        DropDownOption(
+            id=str(o.id),
+            title=f"{o.id} — {o.customer_name or ''} ({o.status or ''})"
+        )
+        for o in orders if o.id
+    ]
