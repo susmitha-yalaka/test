@@ -32,7 +32,6 @@ def list_orders(
     resp = orders_service.orders_list_for_dropdown(db, statuses)
     log.info("Returned %d orders (status=%s)", len(resp), statuses or "ALL")
 
-    # FastAPI could return 'resp' directly, but keeping your explicit JSONResponse:
     return JSONResponse(content=jsonable_encoder(resp))
 
 

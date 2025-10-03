@@ -161,13 +161,6 @@ async def processingDecryptedData_boutique(dd: DecryptedRequestData, db: Session
             print(f"_map_orders(filtered){_map_orders(filtered)}")
             return {"version": "3.0", "data": {"orders": _map_orders(filtered)}}
 
-        # select order
-        if action == "data_exchange" and trigger == "select_order":
-            order_id = data_in.get("orderId")
-            print(order_id)
-            log.debug("VIEW_ORDER selected order: %s", data_in.get("orderId"))
-            return {"version": "3.0", "data": {}}
-
         # view_order → navigate to details screen
         if action == "data_exchange" and trigger == "select_order":
             order_id = data_in.get("orderId") or data_in.get("id")
@@ -178,14 +171,13 @@ async def processingDecryptedData_boutique(dd: DecryptedRequestData, db: Session
                 return {"version": "3.0", "screen": "VIEW_ORDER", "data": {}}
 
             try:
-                order = orders_router.get_order_out(db, order_id)
+                order = orders_router.get_order(db, order_id)
                 detail = _format_order_rich_text(order)
                 return {
                     "version": "3.0",
                     "screen": "VIEW_ORDER_DETAILS",
                     "data": {
-                        "order_detail_text": detail,
-                        "orderId": order_id
+                        "order_detail_text": detail
                     },
                 }
             except Exception:
