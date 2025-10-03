@@ -1,5 +1,5 @@
 # app/routers/test_flow.py
-from typing import Any, Dict, Optional, List
+from typing import Any, Dict, Optional, List, Tuple
 import logging
 import traceback
 
@@ -75,51 +75,88 @@ def _get(o: Any, name: str, default: str = "") -> str:
     return "" if val is None else str(val)
 
 
+def _money(v: Any) -> str:
+    if v is None:
+        return "—"
+    try:
+        n = int(v)
+    except Exception:
+        return f"₹{v}"
+    return f"₹{n}"
+
+
 def _format_order_text(o: Any) -> str:
-    items = getattr(o, "items", []) or []
+    # Header
     lines: List[str] = []
-    total = 0
+    title = "🧾 ORDER SUMMARY"
+    lines.append(title)
+    lines.append("=" * len(title))
+    lines.append(f"ID: {_get(o, 'id')}")
+    lines.append(f"Status: {_get(o, 'status')}")
+    lines.append(f"Created: {_get(o, 'created_at')}")
+    lines.append(f"Fulfillment: {_get(o, 'fulfillment_date')}")
+    lines.append("")
 
-    for it in items:
-        title = _get(it, "title") or _get(it, "sku")
-        qty = getattr(it, "quantity", 0) or 0
-        price = getattr(it, "unit_price", None)
-        size = _get(it, "size")
-        color = _get(it, "color")
+    # Customer
+    lines.append("👤 CUSTOMER")
+    lines.append("-----------")
+    lines.append(_get(o, "customer_name"))
+    lines.append(_get(o, "customer_phone"))
+    lines.append(_get(o, "customer_email"))
+    addr = _get(o, "customer_address")
+    if addr:
+        lines.append(addr)
+    lines.append("")
 
-        parts = [f"- {title} x {qty}"]
-        if price is not None:
-            parts.append(f"@ ₹{price}")
+    # Items table
+    items = getattr(o, "items", []) or []
+    lines.append("📦 ITEMS")
+    lines.append("--------")
 
-        meta = " ".join(p for p in (size, color) if p)
-        if meta:
-            parts.append(f"({meta})")
+    if not items:
+        lines.append("—")
+    else:
+        # Build rows with meta appended to title
+        rows: List[Tuple[str, str, str, str]] = []
+        total = 0
+        for it in items:
+            title = _get(it, "title") or _get(it, "sku")
+            size = _get(it, "size")
+            color = _get(it, "color")
+            meta = " ".join(p for p in (size, color) if p)
+            if meta:
+                title = f"{title} ({meta})"
+            qty = int(getattr(it, "quantity", 0) or 0)
+            unit = getattr(it, "unit_price", None)
+            sub = (unit or 0) * qty
+            rows.append((title, str(qty), _money(unit), _money(sub)))
+            total += sub
 
-        lines.append(" ".join(parts))
-        total += (price or 0) * qty
+        # Column widths
+        item_w = max(12, min(38, max(len(r[0]) for r in rows)))
+        qty_w = max(3, max(len(r[1]) for r in rows))
+        unit_w = max(5, max(len(r[2]) for r in rows))
+        sub_w = max(7, max(len(r[3]) for r in rows))
 
-    out: List[str] = [
-        f"Order: {_get(o, 'id')}",
-        f"Status: {_get(o, 'status')}",
-        f"Created: {_get(o, 'created_at')}",
-        f"Fulfillment: {_get(o, 'fulfillment_date')}",
-        "",
-        "Customer:",
-        _get(o, "customer_name"),
-        _get(o, "customer_phone"),
-        _get(o, "customer_email"),
-        _get(o, "customer_address"),
-        "",
-        "Items:",
-    ]
-    out.extend(lines or ["—"])
-    out.extend(["", f"Estimated Total: ₹{total}"])
+        header = f"{'Item':<{item_w}} | {'Qty':^{qty_w}} | {'Unit':>{unit_w}} | {'Subtotal':>{sub_w}}"
+        sep = "-" * len(header)
+        lines.append(header)
+        lines.append(sep)
+        for t, q, u, s in rows:
+            lines.append(f"{t:<{item_w}} | {q:^{qty_w}} | {u:>{unit_w}} | {s:>{sub_w}}")
 
+        lines.append(sep)
+        lines.append(f"{'TOTAL':<{item_w}} | {'':^{qty_w}} | {'':>{unit_w}} | {_money(total):>{sub_w}}")
+
+    # Note
     note = _get(o, "note")
     if note:
-        out.extend(["", f"Note: {note}"])
+        lines.append("")
+        lines.append("📝 NOTE")
+        lines.append("-------")
+        lines.append(note)
 
-    return "\n".join(out)
+    return "\n".join(lines)
 
 # ---------- main flow logic ----------
 
