@@ -122,7 +122,16 @@ def orders_list_for_dropdown(
         print(compiled)
 
     orders = q.order_by(Order.created_at.desc()).all()
-    print(orders)
+    visible = [
+        {
+            "id": str(o.id),
+            "customer_name": o.customer_name,
+            "status": getattr(o.status, "value", o.status),
+            "created_at": o.created_at,
+        }
+        for o in orders
+    ]
+    print(visible)
 
     return [
         DropDownOption(
