@@ -217,18 +217,6 @@ async def processingDecryptedData_boutique(dd: DecryptedRequestData, db: Session
     action: Optional[str] = dd.action
     trigger: Optional[str] = (data_in.get("trigger") or "").strip() or None
 
-    # CHOOSE_NAV
-    if screen == "CHOOSE_NAV":
-        categories = _map_categories(products_router.list_categories(db))
-        items = _all_variant_options_via_services(db)
-        all_opts = orders_service.orders_list_for_dropdown(db, None)
-        orders_payload = jsonable_encoder(all_opts)
-        return {
-            "version": "3.0",
-            "screen": "CHOOSE_NAV",
-            "data": {"categories": categories, "items": items, "orders": orders_payload, "shipping_status": categories},
-        }
-
     # VIEW_ORDER
     if screen == "VIEW_ORDER":
         log.debug("VIEW_ORDER: action=%s trigger=%s", action, trigger)
