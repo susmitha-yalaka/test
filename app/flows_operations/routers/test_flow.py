@@ -5,6 +5,7 @@ import logging
 import traceback
 
 from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi.encoders import jsonable_encoder
 from sqlalchemy.orm import Session
 
 from app.core.encryptDecrypt import (
@@ -14,8 +15,9 @@ from app.core.encryptDecrypt import (
     encryptResponse,
 )
 from app.core.database import get_db
-from app.routers import products as products_router
 from app.routers import orders as orders_router
+from app.routers import products as products_router
+from app.services import orders as orders_service
 from app.models import OrderStatus
 
 router = APIRouter()
@@ -218,14 +220,12 @@ async def processingDecryptedData_boutique(dd: DecryptedRequestData, db: Session
     if screen == "CHOOSE_NAV":
         categories = _map_categories(products_router.list_categories(db))
         items = _all_variant_options_via_services(db)
-        all_orders = orders_router.list_orders(db, status=None)
-        log.debug("CHOOSE_NAV hydrated: %d categories, %d items, %d orders",
-                  len(categories), len(items), len(all_orders))
+        all_opts = orders_service.orders_list_for_dropdown(db, None)
+        orders_payload = jsonable_encoder(all_opts)
         return {
             "version": "3.0",
             "screen": "CHOOSE_NAV",
-            "data": {"categories": categories, "items": items, "orders": _map_orders(all_orders),
-                      "shipping_status": categories},
+            "data": {"categories": categories, "items": items, "orders": orders_payload, "shipping_status": categories},
         }
 
     # VIEW_ORDER
@@ -235,12 +235,10 @@ async def processingDecryptedData_boutique(dd: DecryptedRequestData, db: Session
         # filter by status
         if action == "data_exchange" and trigger == "apply_filter":
             filters_raw = data_in.get("filter") or "ALL"
-            # status_enums = [_status_from_any(f) for f in filters_raw]
-            # print(f"status_enum{status_enums}")
-            # Assuming list_orders can accept multiple statuses
-            filtered = orders_router.list_orders(db, filters_raw)
-            print(f"filtered: {filtered}")
-            return {"version": "3.0", "data": {"orders": filtered}}
+            opts = orders_service.orders_list_for_dropdown(db, filters_raw)
+            orders_payload = jsonable_encoder(opts)
+            print(f"filtered: {orders_payload}")
+            return {"version": "3.0", "data": {"orders": orders_payload}}
 
         # view_order → navigate to details screen
         if action == "data_exchange" and trigger == "select_order":
