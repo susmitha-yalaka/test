@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Sequence
 from sqlalchemy.orm import Session
 from app.models import Order, OrderItem, ProductVariant, ProductCategory, OrderStatus
 from app.schemas import DropDownOption, OrderCreate, OrderOut, OrderOutItem, OrderStatusUpdate
@@ -90,15 +90,21 @@ def get_order_out(db: Session, order_id: str) -> OrderOut:
     )
 
 
-def orders_list_for_dropdown(db: Session, status: Optional[OrderStatus] = None) -> List[DropDownOption]:
+def orders_list_for_dropdown(
+    db: Session,
+    statuses: Optional[Sequence[OrderStatus]] = None
+) -> List[DropDownOption]:
     q = db.query(Order)
-    if status:
-        q = q.filter(Order.status == status)
+
+    if statuses:
+        q = q.filter(Order.status.in_(statuses))
+
     orders = q.order_by(Order.created_at.desc()).all()
+
     return [
         DropDownOption(
             id=str(o.id),
-            title=f"{o.id} — {o.customer_name or ''} ({o.status or ''})"
+            title=f"{o.id} — {o.customer_name or ''} ({getattr(o.status, 'name', o.status) or ''})"
         )
         for o in orders if o.id
     ]

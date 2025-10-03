@@ -146,13 +146,18 @@ async def processingDecryptedData_boutique(dd: DecryptedRequestData, db: Session
         log.debug("VIEW_ORDER: action=%s trigger=%s", action, trigger)
 
         # filter by status
-        if action == "data_exchange" and trigger == "filter_by_category":
-            status_raw = data_in.get("category") or "ALL"
-            status_enum = _status_from_any(status_raw)
-            print(f"status_enum{status_enum}")
-            filtered = orders_router.list_orders(db, status_enum)
-            print(f"filtered{filtered}")
-            log.debug("VIEW_ORDER filter: status=%s -> %d orders", status_raw, len(filtered))
+        if action == "data_exchange" and trigger == "apply_filter":
+            filters_raw = data_in.get("filter") or "ALL"
+            status_enums = [_status_from_any(f) for f in filters_raw]
+            print(f"status_enum{status_enums}")
+            # Assuming list_orders can accept multiple statuses
+            filtered = orders_router.list_orders(db, status_enums)
+            print(f"filtered: {filtered}")
+
+            log.debug("VIEW_ORDER filter: status=%s -> %d orders", filters_raw, len(filtered))
+
+            mapped = _map_orders(filtered)
+            print(f"_map_orders(filtered): {mapped}")
             print(f"_map_orders(filtered){_map_orders(filtered)}")
             return {"version": "3.0", "data": {"orders": _map_orders(filtered)}}
 
@@ -164,18 +169,32 @@ async def processingDecryptedData_boutique(dd: DecryptedRequestData, db: Session
             return {"version": "3.0", "data": {}}
 
         # view_order → navigate to details screen
-        if action == "data_exchange" and trigger == "view_order":
-            order_id = data_in.get("orderId")
-            log.debug("VIEW_ORDER view_order: orderId=%s", order_id)
+        if action == "data_exchange" and trigger == "select_order":
+            order_id = data_in.get("orderId") or data_in.get("id")
+            log.debug("VIEW_ORDER select_order: orderId=%s", order_id)
+
             if not order_id:
-                return {"version": "3.0", "data": {}}
+                # nothing selected; keep current screen but return gracefully
+                return {"version": "3.0", "screen": "VIEW_ORDER", "data": {}}
+
             try:
                 order = orders_router.get_order_out(db, order_id)
                 detail = _format_order_rich_text(order)
+                return {
+                    "version": "3.0",
+                    "screen": "VIEW_ORDER_DETAILS",
+                    "data": {
+                        "order_detail_text": detail,
+                        "orderId": order_id
+                    },
+                }
             except Exception:
                 log.exception("Failed to load order details for id=%s", order_id)
-                detail = "Unable to load order details."
-            return {"version": "3.0", "screen": "VIEW_ORDER_DETAILS", "data": {"order_detail_text": detail}}
+                return {
+                    "version": "3.0",
+                    "screen": "VIEW_ORDER_DETAILS",
+                    "data": {"order_detail_text": "Unable to load order details."},
+                }
 
         # initial load
         all_orders = orders_router.list_orders(db, status=None)

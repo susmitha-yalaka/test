@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
-from typing import List, Optional
+from typing import List, Optional, Union
 import logging
 
 from app.core.database import get_db
@@ -15,11 +15,24 @@ log = logging.getLogger("routers.orders")
 
 
 @router.get("", response_model=List[DropDownOption])
-def list_orders(db: Session = Depends(get_db), status: Optional[OrderStatus] = Query(default=None)):
-    log.debug("GET /orders | status=%s", status)
-    resp = orders_service.orders_list_for_dropdown(db, status)
-    print(f"resp{resp}")
-    log.info("Returned %d orders (status=%s)", len(resp), status or "ALL")
+def list_orders(
+    db: Session = Depends(get_db),
+    status: Optional[Union[List[OrderStatus], OrderStatus]] = Query(default=None)
+):
+    # Normalize to a list of statuses or None
+    if status is None:
+        statuses = None
+    elif isinstance(status, list):
+        statuses = status
+    else:
+        statuses = [status]
+
+    log.debug("GET /orders | status=%s", statuses or "ALL")
+
+    resp = orders_service.orders_list_for_dropdown(db, statuses)
+    log.info("Returned %d orders (status=%s)", len(resp), statuses or "ALL")
+
+    # FastAPI could return 'resp' directly, but keeping your explicit JSONResponse:
     return JSONResponse(content=jsonable_encoder(resp))
 
 
@@ -52,4 +65,16 @@ def update_status(order_id: str, upd: OrderStatusUpdate, db: Session = Depends(g
         return out
     except ValueError as e:
         log.warning("Update status failed | id=%s reason=%s", order_id, e)
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.get("/{order_id}", response_model=OrderOut)
+def get_order(order_id: str, db: Session = Depends(get_db)):
+    log.debug("GET /orders/%s", order_id)
+    try:
+        out = orders_service.get_order_out(db, order_id)
+        log.info("Returned order id=%s with %d items", order_id, len(out.items or []))
+        return out
+    except ValueError as e:
+        log.warning("Order not found: %s", e)
         raise HTTPException(status_code=404, detail=str(e))
