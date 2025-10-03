@@ -118,6 +118,7 @@ def orders_list_for_dropdown(
         wanted: List[str] = [s.strip() for s in statuses if s and str(s).strip()]
         # compare as strings even if the column is a PG ENUM
         q = q.filter(cast(Order.status, String).in_(wanted))
+        print(q)
 
     orders = q.order_by(Order.created_at.desc()).all()
     print(orders)
