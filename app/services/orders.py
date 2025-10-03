@@ -119,6 +119,7 @@ def orders_list_for_dropdown(
         # compare as strings even if the column is a PG ENUM
         q = q.filter(cast(Order.status, String).in_(wanted))
         print(q)
+        print(q.statement.compile().params)
 
     orders = q.order_by(Order.created_at.desc()).all()
     print(orders)
