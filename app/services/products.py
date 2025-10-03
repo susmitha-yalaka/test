@@ -19,7 +19,7 @@ def list_all_variants(db: Session):
         .all()
     )
     return [
-        VariantOut(id=v.sku, title=v.title, size=v.size, color=v.color)
+        VariantOut(id=v.sku, title=v.title)
         for v in variants
     ]
 
@@ -35,7 +35,7 @@ def list_variants_by_category(db: Session, category_id: str):
         .all()
     )
     return [
-        VariantOut(id=v.sku, title=v.title, size=v.size, color=v.color)
+        VariantOut(id=v.sku, title=v.title)
         for v in variants
     ]
 

@@ -12,10 +12,8 @@ class CategoryOut(BaseModel):
 
 
 class VariantOut(BaseModel):
-    id: str  # sku
+    id: str
     title: str
-    size: Optional[str] = None
-    color: Optional[str] = None
 
 
 class InventoryAdjustmentIn(BaseModel):
