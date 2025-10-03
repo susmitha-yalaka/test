@@ -238,7 +238,12 @@ async def processingDecryptedData_boutique(dd: DecryptedRequestData, db: Session
             opts = orders_service.orders_list_for_dropdown(db, filters_raw)
             orders_payload = jsonable_encoder(opts)
             print(f"filtered: {orders_payload}")
-            return {"version": "3.0", "data": {"orders": orders_payload}}
+            filtered = [
+                {
+                    "id": "56789", "title": "etdrfyuio", "description":"iuytresdgf", "metadata":"iouyt"
+                }
+            ]
+            return {"version": "3.0", "data": {"orders": filtered}}
 
         # view_order → navigate to details screen
         if action == "data_exchange" and trigger == "select_order":
