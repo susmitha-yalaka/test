@@ -171,7 +171,7 @@ async def processingDecryptedData_boutique(dd: DecryptedRequestData, db: Session
                 return {"version": "3.0", "screen": "VIEW_ORDER", "data": {}}
 
             try:
-                order = orders_router.get_order(db, order_id)
+                order = orders_router.get_order(order_id, db)
                 detail = _format_order_rich_text(order)
                 return {
                     "version": "3.0",

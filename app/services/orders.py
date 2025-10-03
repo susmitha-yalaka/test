@@ -15,7 +15,7 @@ def create_order(db: Session, payload: OrderCreate) -> OrderOut:
         status=OrderStatus.Pending,
     )
     db.add(order)
-    db.flush()  # get order.id
+    db.flush()
 
     for it in payload.items:
         variant = db.query(ProductVariant).get(it.item_variant)
