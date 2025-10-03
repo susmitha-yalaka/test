@@ -240,9 +240,6 @@ async def processingDecryptedData_boutique(dd: DecryptedRequestData, db: Session
             # Assuming list_orders can accept multiple statuses
             filtered = orders_router.list_orders(db, filters_raw)
             print(f"filtered: {filtered}")
-
-            log.debug("VIEW_ORDER filter: status=%s -> %d orders", filters_raw, len(filtered))
-
             mapped = _map_orders(filtered)
             print(f"_map_orders(filtered): {mapped}")
             print(f"_map_orders(filtered){_map_orders(filtered)}")
