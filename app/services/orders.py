@@ -1,5 +1,5 @@
 from typing import List, Optional, Sequence
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, selectinload
 from app.models import Order, OrderItem, ProductVariant, ProductCategory, OrderStatus
 from app.schemas import DropDownOption, OrderCreate, OrderOut, OrderOutItem, OrderStatusUpdate
 
@@ -73,10 +73,11 @@ def list_all_orders(db: Session) -> List[dict]:
 
 def get_order_out(db: Session, order_id: str) -> OrderOut:
     print(f"[get_order_out] id={order_id}")
-
     o = (
         db.query(Order)
-        .options(joinedload(Order.items).joinedload("variant"))
+        .options(
+            selectinload(Order.items).selectinload(OrderItem.variant)
+        )
         .filter(Order.id == order_id)
         .one_or_none()
     )
@@ -88,9 +89,9 @@ def get_order_out(db: Session, order_id: str) -> OrderOut:
 
     items = []
     for i, it in enumerate(o.items or []):
-        has_variant = bool(getattr(it, "variant", None))
-        title = it.variant.title if has_variant else it.sku
-        print(f"[item {i}] sku={it.sku} qty={it.quantity} price={it.unit_price} has_variant={has_variant}")
+        v = getattr(it, "variant", None)  # should exist due to FK, but guard anyway
+        title = getattr(v, "title", None) or it.sku
+        print(f"[item {i}] sku={it.sku} qty={it.quantity} price={it.unit_price} has_variant={bool(v)}")
         items.append(OrderOutItem(
             sku=it.sku, title=title, quantity=it.quantity,
             unit_price=it.unit_price, size=it.size, color=it.color

@@ -71,7 +71,7 @@ def update_status(order_id: str, upd: OrderStatusUpdate, db: Session = Depends(g
 def get_order(order_id: str, db: Session = Depends(get_db)):
     log.debug("GET /orders/%s", order_id)
     try:
-        out = orders_service.get_order_out(db, order_id)
+        out = orders_service.get_order_out(db=db, order_id=order_id)
         log.info("Returned order id=%s with %d items", order_id, len(out.items or []))
         return out
     except ValueError as e:

@@ -79,8 +79,7 @@ class OrderItem(Base):
     size = Column(String, nullable=True)
     color = Column(String, nullable=True)
     quantity = Column(Integer, default=1, nullable=False)
-    unit_price = Column(Integer, nullable=True)  # store in smallest currency unit if you prefer
-
+    unit_price = Column(Integer, nullable=True)
     __table_args__ = (
         UniqueConstraint("order_id", "sku", name="uq_order_sku"),
     )
