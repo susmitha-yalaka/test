@@ -115,8 +115,10 @@ def orders_list_for_dropdown(
 
     if statuses:
         q = q.filter(Order.status.in_(statuses))
+        print(q)
 
     orders = q.order_by(Order.created_at.desc()).all()
+    print(orders)
 
     return [
         DropDownOption(
