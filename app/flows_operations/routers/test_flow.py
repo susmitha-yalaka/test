@@ -70,79 +70,56 @@ def _all_variant_options_via_services(db: Session) -> List[Dict[str, str]]:
     return items
 
 
-def _format_order_rich_text(order) -> str:
-    oid = getattr(order, "id", "")
-    status = getattr(order, "status", "")
-    created_at = getattr(order, "created_at", "")
-    cname = getattr(order, "customer_name", "")
-    cphone = getattr(order, "customer_phone", "")
-    cemail = getattr(order, "customer_email", "") or ""
-    caddr = getattr(order, "customer_address", "") or ""
-    fdate = getattr(order, "fulfillment_date", "") or ""
-    note = getattr(order, "note", "") or ""
+def _get(o: Any, name: str, default: str = "") -> str:
+    val = getattr(o, name, default)
+    return "" if val is None else str(val)
 
-    items = getattr(order, "items", []) or []
-    lines = []
+
+def _format_order_text(o: Any) -> str:
+    items = getattr(o, "items", []) or []
+    lines: List[str] = []
+    total = 0
+
     for it in items:
-        title = getattr(it, "title", getattr(it, "sku", ""))
-        qty = getattr(it, "quantity", 0)
-        unit_price = getattr(it, "unit_price", None)
-        size = getattr(it, "size", None) or ""
-        color = getattr(it, "color", None) or ""
-        meta = " ".join([s for s in [size, color] if s]).strip()
-        line = f"• {title} x {qty}" + (f" @ ₹{unit_price}" if unit_price is not None else "")
+        title = _get(it, "title") or _get(it, "sku")
+        qty = getattr(it, "quantity", 0) or 0
+        price = getattr(it, "unit_price", None)
+        size = _get(it, "size")
+        color = _get(it, "color")
+
+        parts = [f"- {title} x {qty}"]
+        if price is not None:
+            parts.append(f"@ ₹{price}")
+
+        meta = " ".join(p for p in (size, color) if p)
         if meta:
-            line += f" ({meta})"
-        lines.append(line)
+            parts.append(f"({meta})")
 
-    items_block = "<br/>".join(lines) if lines else "—"
-    try:
-        total = sum((getattr(it, "unit_price", 0) or 0) * (getattr(it, "quantity", 0) or 0) for it in items)
-    except Exception:
-        total = 0
+        lines.append(" ".join(parts))
+        total += (price or 0) * qty
 
-    parts = [
-        f"<b>Order:</b> {oid} &nbsp; <b>Status:</b> {status}<br/>",
-        f"<b>Created:</b> {created_at} &nbsp; <b>Fulfillment:</b> {fdate}<br/><br/>",
-        "<b>Customer</b><br/>",
-        f"{cname}<br/>{cphone}<br/>{cemail}<br/>{caddr}<br/><br/>",
-        f"<b>Items</b><br/>{items_block}<br/><br/>",
-        f"<b>Estimated Total:</b> ₹{total}<br/>",
+    out: List[str] = [
+        f"Order: {_get(o, 'id')}",
+        f"Status: {_get(o, 'status')}",
+        f"Created: {_get(o, 'created_at')}",
+        f"Fulfillment: {_get(o, 'fulfillment_date')}",
+        "",
+        "Customer:",
+        _get(o, "customer_name"),
+        _get(o, "customer_phone"),
+        _get(o, "customer_email"),
+        _get(o, "customer_address"),
+        "",
+        "Items:",
     ]
+    out.extend(lines or ["—"])
+    out.extend(["", f"Estimated Total: ₹{total}"])
+
+    note = _get(o, "note")
     if note:
-        parts.append(f"<br/><b>Note:</b> {note}")
-    return "".join(parts)
+        out.extend(["", f"Note: {note}"])
 
-
-# add this next to _format_order_rich_text
-def _format_order_plain_text(order) -> str:
-    items = getattr(order, "items", []) or []
-    lines = [f"- {(getattr(it, 'title', None) or getattr(it, 'sku', ''))} x {getattr(it, 'quantity', 0)}"
-             + (f" @ ₹{getattr(it, 'unit_price', 0)}" if getattr(it, 'unit_price', None) is not None else "")
-             for it in items]
-    total = sum((getattr(it, "unit_price", 0) or 0) * (getattr(it, "quantity", 0) or 0) for it in items)
-    return (
-        f"Order: {getattr(order, 'id', '')}\n"
-        f"Status: {getattr(order, 'status', '')}\n"
-        f"Created: {getattr(order, 'created_at', '')}\n"
-        f"Fulfillment: {getattr(order, 'fulfillment_date', '')}\n\n"
-        f"Customer:\n{getattr(order, 'customer_name', '')}\n{getattr(order, 'customer_phone', '')}\n"
-        f"{getattr(order, 'customer_email', '')}\n{getattr(order, 'customer_address', '')}\n\n"
-        f"Items:\n" + ("\n".join(lines) if lines else "—") + f"\n\nEstimated Total: ₹{total}\n"
-        + (f"\nNote: {getattr(order, 'note', '')}" if getattr(order, 'note', '') else "")
-    )
-
-
-def _format_order_markdown(order) -> str:
-    html = _format_order_rich_text(order)  # you already have this
-    # quick swap of <b> and <br/> to markdown/newlines
-    md = (html.replace("<b>", "**").replace("</b>", "**")
-              .replace("<br/>", "\n").replace("&nbsp;", " "))
-    # ensure it actually starts with "**Order:**" (avoid stray '>' issues)
-    if md.lstrip().startswith(">Order:"):
-        md = "**Order:**" + md.split("Order:", 1)[1]
-    return md
-
+    return "\n".join(out)
 
 # ---------- main flow logic ----------
 
@@ -203,7 +180,7 @@ async def processingDecryptedData_boutique(dd: DecryptedRequestData, db: Session
 
             try:
                 order = orders_router.get_order(order_id, db)
-                detail = _format_order_rich_text(order)
+                detail = _format_order_text(order)
                 print(f"detail{detail}")
                 return {
                     "version": "3.0",
@@ -231,7 +208,7 @@ async def processingDecryptedData_boutique(dd: DecryptedRequestData, db: Session
         if order_id:
             try:
                 order = orders_router.get_order(order_id, db)
-                detail = _format_order_rich_text(order)
+                detail = _format_order_text(order)
                 return {"version": "3.0", "screen": "VIEW_ORDER_DETAILS", "data": {"order_detail_text": detail}}
             except Exception:
                 log.exception("Failed to load order details (direct) for id=%s", order_id)
