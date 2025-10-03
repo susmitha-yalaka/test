@@ -1,4 +1,5 @@
 # app/routers/test_flow.py
+from datetime import date, datetime
 from typing import Any, Dict, Optional, List, Tuple
 import logging
 import traceback
@@ -70,93 +71,134 @@ def _all_variant_options_via_services(db: Session) -> List[Dict[str, str]]:
     return items
 
 
-def _get(o: Any, name: str, default: str = "") -> str:
+def _get_str(o: Any, name: str, default: str = "") -> str:
     val = getattr(o, name, default)
     return "" if val is None else str(val)
 
 
-def _money(v: Any) -> str:
-    if v is None:
-        return "—"
+def _fmt_dt(v: Any) -> str:
+    if isinstance(v, datetime):
+        return v.strftime("%Y-%m-%d %H:%M")
+    if isinstance(v, date):
+        return v.strftime("%Y-%m-%d")
+    return _get_str(v, "", "")
+
+
+def _inr(n: Any) -> str:
     try:
-        n = int(v)
+        x = int(n)
     except Exception:
-        return f"₹{v}"
-    return f"₹{n}"
+        return "—" if n in (None, "") else f"₹{n}"
+    s = str(abs(x))
+    if len(s) > 3:
+        s = s[:-3][::-1]
+        s = ",".join(s[i:i+2] for i in range(0, len(s), 2))[::-1] + "," + str(abs(x))[-3:]
+    sign = "-" if x < 0 else ""
+    return f"{sign}₹{s}"
+
+
+def _status_badge(status: str) -> Tuple[str, str]:
+    s = (status or "").strip()
+    steps = ["Pending", "Confirmed", "Preparing", "Out for delivery", "Delivered"]
+    icons = {
+        "Pending": "⏳",
+        "Confirmed": "🟢",
+        "Preparing": "🧑‍🍳",
+        "Out for delivery": "🚚",
+        "Delivered": "✅",
+        "Cancelled": "❌",
+    }
+    if s == "Cancelled":
+        return f"{icons['Cancelled']} Cancelled", "[✖]"
+    idx = steps.index(s) if s in steps else 0
+    bar = ["●" if i < idx else ("⏺" if i == idx else "○") for i in range(len(steps))]
+    return f"{icons.get(s, '⏳')} {s}", "[" + "".join(bar) + "]"
 
 
 def _format_order_text(o: Any) -> str:
+    order_id = _get_str(o, "id")
+    status_raw = _get_str(o, "status")
+    status_line, status_bar = _status_badge(status_raw)
+
+    created = _fmt_dt(getattr(o, "created_at", None))
+    fulfill = _fmt_dt(getattr(o, "fulfillment_date", None))
+
+    cust_name = _get_str(o, "customer_name")
+    cust_phone = _get_str(o, "customer_phone")
+    cust_email = _get_str(o, "customer_email")
+    cust_addr = _get_str(o, "customer_address")
+
+    items = getattr(o, "items", []) or []
+    rows: List[Tuple[str, str, str, str]] = []
+    total = 0
+
+    for it in items:
+        title = _get_str(it, "title") or _get_str(it, "sku")
+        size = _get_str(it, "size")
+        color = _get_str(it, "color")
+        meta = " ".join(p for p in (size, color) if p).strip()
+        if meta:
+            title = f"{title} ({meta})"
+
+        qty = int(getattr(it, "quantity", 0) or 0)
+        unit = getattr(it, "unit_price", None)
+        sub = (unit or 0) * qty
+        rows.append((title, str(qty), _inr(unit), _inr(sub)))
+        total += sub
+
     # Header
-    lines: List[str] = []
-    title = "🧾 ORDER SUMMARY"
-    lines.append(title)
-    lines.append("=" * len(title))
-    lines.append(f"ID: {_get(o, 'id')}")
-    lines.append(f"Status: {_get(o, 'status')}")
-    lines.append(f"Created: {_get(o, 'created_at')}")
-    lines.append(f"Fulfillment: {_get(o, 'fulfillment_date')}")
-    lines.append("")
+    out: List[str] = []
+    header = f"🧾 ORDER {order_id}"
+    out.append(header)
+    out.append("═" * len(header))
+    out.append(f"{status_line}  {status_bar}")
+    out.append(f"🕒 Created: {created}")
+    out.append(f"📅 Fulfillment: {fulfill}")
+    out.append("")
 
     # Customer
-    lines.append("👤 CUSTOMER")
-    lines.append("-----------")
-    lines.append(_get(o, "customer_name"))
-    lines.append(_get(o, "customer_phone"))
-    lines.append(_get(o, "customer_email"))
-    addr = _get(o, "customer_address")
-    if addr:
-        lines.append(addr)
-    lines.append("")
+    out.append("👤 CUSTOMER")
+    out.append("──────────")
+    if cust_name:
+        out.append(cust_name)
+    if cust_phone:
+        out.append(f"📞 {cust_phone}")
+    if cust_email:
+        out.append(f"✉️  {cust_email}")
+    if cust_addr:
+        out.append(f"📍 {cust_addr}")
+    out.append("")
 
-    # Items table
-    items = getattr(o, "items", []) or []
-    lines.append("📦 ITEMS")
-    lines.append("--------")
-
-    if not items:
-        lines.append("—")
+    # Items block (pseudo-table that reads well on mobile)
+    out.append("📦 ITEMS")
+    out.append("────────")
+    if not rows:
+        out.append("—")
     else:
-        # Build rows with meta appended to title
-        rows: List[Tuple[str, str, str, str]] = []
-        total = 0
-        for it in items:
-            title = _get(it, "title") or _get(it, "sku")
-            size = _get(it, "size")
-            color = _get(it, "color")
-            meta = " ".join(p for p in (size, color) if p)
-            if meta:
-                title = f"{title} ({meta})"
-            qty = int(getattr(it, "quantity", 0) or 0)
-            unit = getattr(it, "unit_price", None)
-            sub = (unit or 0) * qty
-            rows.append((title, str(qty), _money(unit), _money(sub)))
-            total += sub
-
-        # Column widths
-        item_w = max(12, min(38, max(len(r[0]) for r in rows)))
+        # compute widths but keep mobile-friendly (cap item width)
+        item_w = min(36, max(10, max(len(r[0]) for r in rows)))
         qty_w = max(3, max(len(r[1]) for r in rows))
         unit_w = max(5, max(len(r[2]) for r in rows))
         sub_w = max(7, max(len(r[3]) for r in rows))
 
-        header = f"{'Item':<{item_w}} | {'Qty':^{qty_w}} | {'Unit':>{unit_w}} | {'Subtotal':>{sub_w}}"
-        sep = "-" * len(header)
-        lines.append(header)
-        lines.append(sep)
+        header_row = f"{'Item':<{item_w}} │ {'Qty':^{qty_w}} │ {'Unit':>{unit_w}} │ {'Subtotal':>{sub_w}}"
+        out.append(header_row)
+        out.append("─" * len(header_row))
         for t, q, u, s in rows:
-            lines.append(f"{t:<{item_w}} | {q:^{qty_w}} | {u:>{unit_w}} | {s:>{sub_w}}")
-
-        lines.append(sep)
-        lines.append(f"{'TOTAL':<{item_w}} | {'':^{qty_w}} | {'':>{unit_w}} | {_money(total):>{sub_w}}")
+            out.append(f"{t:<{item_w}} │ {q:^{qty_w}} │ {u:>{unit_w}} │ {s:>{sub_w}}")
+        out.append("─" * len(header_row))
+        out.append(f"{'TOTAL':<{item_w}} │ {'':^{qty_w}} │ {'':>{unit_w}} │ {_inr(total):>{sub_w}}")
 
     # Note
-    note = _get(o, "note")
+    note = _get_str(o, "note")
     if note:
-        lines.append("")
-        lines.append("📝 NOTE")
-        lines.append("-------")
-        lines.append(note)
+        out.append("")
+        out.append("📝 NOTE")
+        out.append("──────")
+        out.append(note)
 
-    return "\n".join(lines)
+    return "\n".join(out)
+
 
 # ---------- main flow logic ----------
 
