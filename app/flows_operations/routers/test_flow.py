@@ -137,7 +137,8 @@ async def processingDecryptedData_boutique(dd: DecryptedRequestData, db: Session
         return {
             "version": "3.0",
             "screen": "CHOOSE_NAV",
-            "data": {"categories": categories, "items": items, "orders": _map_orders(all_orders), "shipping_status": categories},
+            "data": {"categories": categories, "items": items, "orders": _map_orders(all_orders),
+                      "shipping_status": categories, "isApplyFilterEnabled": False},
         }
 
     # VIEW_ORDER
@@ -157,6 +158,8 @@ async def processingDecryptedData_boutique(dd: DecryptedRequestData, db: Session
 
         # select order
         if action == "data_exchange" and trigger == "select_order":
+            order_id = data_in.get("orderId")
+            print(order_id)
             log.debug("VIEW_ORDER selected order: %s", data_in.get("orderId"))
             return {"version": "3.0", "data": {}}
 
