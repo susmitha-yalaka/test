@@ -1,5 +1,5 @@
 from typing import List, Optional, Sequence
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from app.models import Order, OrderItem, ProductVariant, ProductCategory, OrderStatus
 from app.schemas import DropDownOption, OrderCreate, OrderOut, OrderOutItem, OrderStatusUpdate
 
@@ -72,22 +72,38 @@ def list_all_orders(db: Session) -> List[dict]:
 
 
 def get_order_out(db: Session, order_id: str) -> OrderOut:
-    o = db.query(Order).get(order_id)
+    print(f"[get_order_out] id={order_id}")
+
+    o = (
+        db.query(Order)
+        .options(joinedload(Order.items).joinedload("variant"))
+        .filter(Order.id == order_id)
+        .one_or_none()
+    )
     if not o:
+        print(f"[get_order_out] not found: {order_id}")
         raise ValueError("Order not found")
+
+    print(f"[get_order_out] found id={o.id} items={len(o.items or [])}")
+
     items = []
-    for it in o.items:
-        title = it.variant.title if it.variant else it.sku
+    for i, it in enumerate(o.items or []):
+        has_variant = bool(getattr(it, "variant", None))
+        title = it.variant.title if has_variant else it.sku
+        print(f"[item {i}] sku={it.sku} qty={it.quantity} price={it.unit_price} has_variant={has_variant}")
         items.append(OrderOutItem(
             sku=it.sku, title=title, quantity=it.quantity,
             unit_price=it.unit_price, size=it.size, color=it.color
         ))
-    return OrderOut(
+
+    out = OrderOut(
         id=o.id, status=o.status, created_at=o.created_at,
         customer_name=o.customer_name, customer_phone=o.customer_phone,
         customer_email=o.customer_email, customer_address=o.customer_address,
         fulfillment_date=o.fulfillment_date, note=o.note, items=items
     )
+    print(f"[get_order_out] done id={out.id} items={len(out.items)}")
+    return out
 
 
 def orders_list_for_dropdown(
