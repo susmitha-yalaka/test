@@ -70,6 +70,7 @@ def _all_variant_options_via_services(db: Session) -> List[Dict[str, str]]:
             continue
         vs = products_router.list_variants_by_category(db, cid)
         items.extend(_map_variants(vs))
+        print(f"items{items}")
     return items
 
 
@@ -238,7 +239,7 @@ async def processingDecryptedData_boutique(dd: DecryptedRequestData, db: Session
             opts = orders_service.orders_list_for_dropdown(db, filters_raw)
             orders_payload = jsonable_encoder(opts)
             print(f"filtered: {orders_payload}")
-            return {"version": "3.0", "data": {"orders": orders_payload}}
+            return {"version": "3.0", "screen": "VIEW_ORDER", "data": {"orders": orders_payload}}
 
         # view_order → navigate to details screen
         if action == "data_exchange" and trigger == "select_order":
