@@ -240,10 +240,7 @@ async def processingDecryptedData_boutique(dd: DecryptedRequestData, db: Session
             # Assuming list_orders can accept multiple statuses
             filtered = orders_router.list_orders(db, filters_raw)
             print(f"filtered: {filtered}")
-            mapped = _map_orders(filtered)
-            print(f"_map_orders(filtered): {mapped}")
-            print(f"_map_orders(filtered){_map_orders(filtered)}")
-            return {"version": "3.0", "data": {"orders": _map_orders(filtered)}}
+            return {"version": "3.0", "data": {"orders": filtered}}
 
         # view_order → navigate to details screen
         if action == "data_exchange" and trigger == "select_order":
