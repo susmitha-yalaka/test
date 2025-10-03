@@ -173,6 +173,7 @@ async def processingDecryptedData_boutique(dd: DecryptedRequestData, db: Session
             try:
                 order = orders_router.get_order(order_id, db)
                 detail = _format_order_rich_text(order)
+                print(f"detail{detail}")
                 return {
                     "version": "3.0",
                     "screen": "VIEW_ORDER_DETAILS",
