@@ -217,7 +217,7 @@ async def processingDecryptedData_boutique(dd: DecryptedRequestData, db: Session
     action: Optional[str] = dd.action
     trigger: Optional[str] = (data_in.get("trigger") or "").strip() or None
 
-    # CHOOSE_NAV → hydrate everything
+    # CHOOSE_NAV
     if screen == "CHOOSE_NAV":
         categories = _map_categories(products_router.list_categories(db))
         items = _all_variant_options_via_services(db)
