@@ -1,4 +1,5 @@
 from typing import List, Optional
+from sqlalchemy import cast, String
 from sqlalchemy.orm import Session, selectinload
 from app.models import Order, OrderItem, ProductVariant, ProductCategory, OrderStatus
 from app.schemas import DropDownOption, OrderCreate, OrderOut, OrderOutItem, OrderStatusUpdate
@@ -114,8 +115,9 @@ def orders_list_for_dropdown(
     q = db.query(Order)
 
     if statuses:
-        q = q.filter(Order.status.in_(statuses))
-        print(q)
+        wanted: List[str] = [s.strip() for s in statuses if s and str(s).strip()]
+        # compare as strings even if the column is a PG ENUM
+        q = q.filter(cast(Order.status, String).in_(wanted))
 
     orders = q.order_by(Order.created_at.desc()).all()
     print(orders)
