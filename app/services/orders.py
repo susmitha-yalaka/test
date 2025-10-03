@@ -136,7 +136,9 @@ def orders_list_for_dropdown(
     return [
         DropDownOption(
             id=str(o.id),
-            title=f"{o.id} — {o.customer_name or ''} ({getattr(o.status, 'name', o.status) or ''})"
+            title=str(o.id),
+            description=o.customer_name or "",
+            metadata=o.status,
         )
         for o in orders if o.id
     ]

@@ -96,5 +96,7 @@ class DataExchangeOut(BaseModel):
 
 class DropDownOption(BaseModel):
     id: str
-    status: str
+    title: str
+    description: str
+    metadata: str
     model_config = ConfigDict(use_enum_values=True)
