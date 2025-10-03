@@ -1,4 +1,4 @@
-from typing import List, Optional, Sequence
+from typing import List, Optional
 from sqlalchemy.orm import Session, selectinload
 from app.models import Order, OrderItem, ProductVariant, ProductCategory, OrderStatus
 from app.schemas import DropDownOption, OrderCreate, OrderOut, OrderOutItem, OrderStatusUpdate
@@ -109,7 +109,7 @@ def get_order_out(db: Session, order_id: str) -> OrderOut:
 
 def orders_list_for_dropdown(
     db: Session,
-    statuses: Optional[Sequence[OrderStatus]] = None
+    statuses: Optional[List] = None
 ) -> List[DropDownOption]:
     q = db.query(Order)
 
