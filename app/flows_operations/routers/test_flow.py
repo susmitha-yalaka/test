@@ -113,6 +113,37 @@ def _format_order_rich_text(order) -> str:
         parts.append(f"<br/><b>Note:</b> {note}")
     return "".join(parts)
 
+
+# add this next to _format_order_rich_text
+def _format_order_plain_text(order) -> str:
+    items = getattr(order, "items", []) or []
+    lines = [f"- {(getattr(it, 'title', None) or getattr(it, 'sku', ''))} x {getattr(it, 'quantity', 0)}"
+             + (f" @ ₹{getattr(it, 'unit_price', 0)}" if getattr(it, 'unit_price', None) is not None else "")
+             for it in items]
+    total = sum((getattr(it, "unit_price", 0) or 0) * (getattr(it, "quantity", 0) or 0) for it in items)
+    return (
+        f"Order: {getattr(order, 'id', '')}\n"
+        f"Status: {getattr(order, 'status', '')}\n"
+        f"Created: {getattr(order, 'created_at', '')}\n"
+        f"Fulfillment: {getattr(order, 'fulfillment_date', '')}\n\n"
+        f"Customer:\n{getattr(order, 'customer_name', '')}\n{getattr(order, 'customer_phone', '')}\n"
+        f"{getattr(order, 'customer_email', '')}\n{getattr(order, 'customer_address', '')}\n\n"
+        f"Items:\n" + ("\n".join(lines) if lines else "—") + f"\n\nEstimated Total: ₹{total}\n"
+        + (f"\nNote: {getattr(order, 'note', '')}" if getattr(order, 'note', '') else "")
+    )
+
+
+def _format_order_markdown(order) -> str:
+    html = _format_order_rich_text(order)  # you already have this
+    # quick swap of <b> and <br/> to markdown/newlines
+    md = (html.replace("<b>", "**").replace("</b>", "**")
+              .replace("<br/>", "\n").replace("&nbsp;", " "))
+    # ensure it actually starts with "**Order:**" (avoid stray '>' issues)
+    if md.lstrip().startswith(">Order:"):
+        md = "**Order:**" + md.split("Order:", 1)[1]
+    return md
+
+
 # ---------- main flow logic ----------
 
 
