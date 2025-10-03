@@ -2,13 +2,13 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
-from typing import List, Optional, Union
+from typing import List, Optional
 import logging
 
 from app.core.database import get_db
 from app.schemas import DropDownOption, OrderCreate, OrderOut, OrderStatusUpdate
 from app.services import orders as orders_service
-from app.models import OrderStatus
+# from app.models import OrderStatus
 
 router = APIRouter()
 log = logging.getLogger("routers.orders")
@@ -17,7 +17,7 @@ log = logging.getLogger("routers.orders")
 @router.get("", response_model=List[DropDownOption])
 def list_orders(
     db: Session = Depends(get_db),
-    status: Optional[Union[List[OrderStatus], OrderStatus]] = Query(default=None)
+    status: Optional[List] = Query(default=None)
 ):
     # Normalize to a list of statuses or None
     if status is None:
@@ -26,10 +26,13 @@ def list_orders(
         statuses = status
     else:
         statuses = [status]
+    print(f"statuses{statuses}")
 
     log.debug("GET /orders | status=%s", statuses or "ALL")
 
     resp = orders_service.orders_list_for_dropdown(db, statuses)
+    print(resp)
+    print(f"response{jsonable_encoder(resp)}")
     log.info("Returned %d orders (status=%s)", len(resp), statuses or "ALL")
 
     return JSONResponse(content=jsonable_encoder(resp))

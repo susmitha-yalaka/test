@@ -235,8 +235,8 @@ async def processingDecryptedData_boutique(dd: DecryptedRequestData, db: Session
         # filter by status
         if action == "data_exchange" and trigger == "apply_filter":
             filters_raw = data_in.get("filter") or "ALL"
-            status_enums = [_status_from_any(f) for f in filters_raw]
-            print(f"status_enum{status_enums}")
+            # status_enums = [_status_from_any(f) for f in filters_raw]
+            # print(f"status_enum{status_enums}")
             # Assuming list_orders can accept multiple statuses
             filtered = orders_router.list_orders(db, filters_raw)
             print(f"filtered: {filtered}")
