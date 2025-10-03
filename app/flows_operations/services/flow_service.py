@@ -35,7 +35,8 @@ def seller_flow(to_number: str, db: Session) -> FlowMessage:
                         data={
                             "categories": categories,
                             "items": variants,
-                            "orders": orders
+                            "orders": orders,
+                            "isApplyFilterEnabled": False
                         }
                         ),
                 )
