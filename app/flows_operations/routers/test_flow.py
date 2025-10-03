@@ -292,7 +292,8 @@ async def processingDecryptedData_boutique(dd: DecryptedRequestData, db: Session
         items = _all_variant_options_via_services(db)
         print(f"categories{categories} \n items{items}")
         log.debug("MANAGE_INVENTORY hydrated: %d categories, %d items", len(categories), len(items))
-        return {"version": "3.0", "screen": "MANAGE_INVENTORY", "data": {"categories": categories, "items": items}}
+        return {"version": "3.0", "screen": "MANAGE_INVENTORY", "data": {"categories": categories, "items": items,
+                "isQuantityEnabled": False, "isItemsFilterEnabled": False}}
 
     # Fallback
     log.debug("Fallback screen: %s", screen)
